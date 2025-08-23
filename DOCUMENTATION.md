@@ -21,6 +21,7 @@ The project is organized as a standard Python package:
 │       ├── config_manager.py
 │       ├── core.py
 │       ├── data_loader.py
+│       ├── gemini_service.py
 │       └── reporting.py
 └── tests
     ├── test_advanced.py
@@ -81,11 +82,11 @@ This function generates an interactive Plotly dashboard to visualize the analysi
 
 #### `initialize_gemini(project_id, location)`
 
-Initializes and returns a Gemini client.
+Initializes and returns a Gemini client for AI-powered analysis.
 
 #### `generate_with_code_execution(client, model_id, prompt)`
 
-Generates content with code execution using the Gemini API.
+Generates content with code execution using the Gemini API, enabling interactive analysis and insights generation.
 
 ## 🖥️ Command-Line Interface (CLI)
 
@@ -101,6 +102,18 @@ This command runs the entire analysis pipeline.
 **Example:**
 ```bash
 finops-cli run --config /path/to/your/config.yaml
+```
+
+### `finops-cli profile`
+
+This command profiles a specific dataset.
+
+**Options:**
+- `--dataset TEXT`: Name of the dataset to profile (e.g., "billing").
+
+**Example:**
+```bash
+finops-cli profile --dataset billing
 ```
 
 ---

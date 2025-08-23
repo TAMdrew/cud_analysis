@@ -74,7 +74,7 @@ class GCSDataLoader:
 
             if self.data_frames:
                 logger.info(f"\n📊 Successfully loaded {len(self.data_frames)} datasets from GCS")
-                self._print_summary() # This call will now work
+                self._print_summary()
             else:
                 logger.warning("⚠️ No data loaded from GCS, using sample data")
                 return self._generate_sample_data()
@@ -104,7 +104,6 @@ class GCSDataLoader:
         logger.info("📊 Generated sample data for demonstration")
         return self.data_frames
 
-    # --- FIX: MOVED AND INDENTED THIS FUNCTION ---
     def _print_summary(self):
         """Print summary of loaded data"""
         print("\n" + "="*60)
