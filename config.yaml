@@ -44,6 +44,7 @@ analysis:
   # - 30-90 days: Monthly trends
   # - 90+ days: Quarterly/annual patterns
 
+  risk_tolerance: "medium"              # Risk tolerance for CUD portfolio (low, medium, high)
   forecast_months: 3                    # Months to forecast ahead
   target_utilization: 85                # Target CUD utilization percentage
   minimum_acceptable_utilization: 60    # Minimum acceptable utilization
