@@ -1,55 +1,43 @@
 import os
+from typing import List
 from google import genai
-from google.genai.types import GenerateContentConfig, Tool, ToolCodeExecution
+from google.genai.types import GenerateContentConfig, Tool, ToolCodeExecution, UrlContext
 
-def initialize_gemini(project_id, location):
-    """Initializes the Gemini client."""
-    return genai.Client(vertexai=True, project=project_id, location=location)
-
-def generate_with_code_execution(client, model_id, prompt):
+def initialize_gemini(project_id: str, location: str) -> genai.Client:
     """
-    Generates content with code execution using the Gemini API.
+    Initializes and returns a Gemini client configured for Vertex AI.
 
     Args:
-        client: The Gemini client.
-        model_id: The ID of the Gemini model to use.
-        prompt: The prompt to send to the model.
+        project_id: The Google Cloud project ID.
+        location: The Google Cloud location for the client.
 
     Returns:
-        The response from the Gemini API.
+        An initialized Gemini client.
     """
-    code_execution_tool = Tool(code_execution=ToolCodeExecution())
+    return genai.Client(vertexai=True, project=project_id, location=location)
 
+def generate_content(client: genai.Client, model_id: str, prompt: str, tools: List[Tool]):
+    """
+    Generates content using the Gemini API with a specified list of tools.
+
+    This function provides a generic interface to the Gemini model, allowing for
+    different capabilities like code execution or URL context to be passed dynamically.
+
+    Args:
+        client: The initialized Gemini client.
+        model_id: The ID of the Gemini model to use (e.g., 'gemini-2.5-pro').
+        prompt: The prompt to send to the model.
+        tools: A list of tools for the model to use.
+
+    Returns:
+        The response object from the Gemini API.
+    """
     response = client.models.generate_content(
         model=model_id,
         contents=prompt,
         config=GenerateContentConfig(
-            tools=[code_execution_tool],
+            tools=tools,
             temperature=0,
         ),
     )
     return response
-
-def stream_with_code_execution(client, model_id, prompt):
-    """
-    Generates content with code execution in a streaming fashion.
-
-    Args:
-        client: The Gemini client.
-        model_id: The ID of the Gemini model to use.
-        prompt: The prompt to send to the model.
-
-    Yields:
-        Chunks of the response from the Gemini API.
-    """
-    code_execution_tool = Tool(code_execution=ToolCodeExecution())
-
-    for chunk in client.models.generate_content_stream(
-        model=model_id,
-        contents=prompt,
-        config=GenerateContentConfig(
-            tools=[code_execution_tool],
-            temperature=0,
-        ),
-    ):
-        yield chunk

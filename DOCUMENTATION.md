@@ -1,6 +1,6 @@
 # 📖 Documentation
 
-This document provides detailed documentation for the **Cloud FinOps CUD Analysis Platform** library.
+This document provides detailed documentation for the **Cloud FinOps CUD Analysis Platform** library (V2.0.0).
 
 ## 🏗️ Project Structure
 
@@ -10,7 +10,8 @@ The project is organized as a standard Python package:
 .
 ├── config.yaml
 ├── notebooks
-│   └── 2025-08_CUD_Analysis_Platform.ipynb
+│   ├── CUD_Analysis_Walkthrough.ipynb
+│   └── AI_Powered_Analysis.ipynb
 ├── src
 │   └── finops_analysis_platform
 │       ├── __init__.py
@@ -24,8 +25,7 @@ The project is organized as a standard Python package:
 │       ├── gemini_service.py
 │       └── reporting.py
 └── tests
-    ├── test_advanced.py
-    └── test_core.py
+    └── ...
 ```
 
 ## 🧩 Core Modules
@@ -34,59 +34,58 @@ The project is organized as a standard Python package:
 
 #### `ConfigManager`
 
-This class handles loading the application's configuration.
+Handles loading the application's configuration from YAML and environment variables.
 
-- **`__init__(self, config_path='config.yaml', env_path='.env')`**: Initializes the manager. It loads the base configuration from the specified YAML file and then overrides any values with environment variables found in the `.env` file.
-- **`get(self, key, default=None)`**: Retrieves a configuration value for a given key.
+- **`__init__(self, config_path='config.yaml', env_path='.env')`**: Initializes the manager.
+- **`get(self, key, default=None)`**: Retrieves a configuration value. Supports dot notation for nested keys (e.g., `'gcp.project_id'`).
 
 ### `data_loader.py`
 
 #### `GCSDataLoader`
 
-This class is responsible for loading data from Google Cloud Storage.
+Responsible for loading data from Google Cloud Storage.
 
-- **`__init__(self, bucket_name)`**: Initializes the data loader with the name of the GCS bucket.
-- **`load_all_data(self)`**: Loads all CSV files from the predefined GCS folder structure (`data/billing/`, `data/recommendations/`, etc.). If it cannot connect to GCS, it generates sample data for demonstration.
+- **`__init__(self, bucket_name)`**: Initializes the data loader with a GCS bucket name.
+- **`load_all_data(self)`**: Loads all CSV files from the predefined GCS folder structure. Falls back to generating realistic sample data if GCS is unavailable.
 
 ### `core.py`
 
 #### `MachineTypeDiscountMapping`
 
-This class manages the mapping of GCP machine types to their various discount rates (1-year CUD, 3-year CUD, Flex CUD, etc.).
+Manages the mapping of GCP machine types to their various discount rates.
 
-- **`__init__(self, config_path=None)`**: Initializes the class, loading the discount rates from the `machine_discounts.yaml` file.
+- **`__init__(self, config_path=None)`**: Initializes the class, loading discount rates from `config/machine_discounts.yaml`.
 - **`get_discount(self, machine_type, discount_type)`**: Returns the discount rate for a specific machine type and discount type.
-- **`get_family(self, machine_type)`**: Returns the family (e.g., "General Purpose", "Compute Optimized") for a given machine type.
 
 #### `CUDAnalyzer`
 
-This is the main analysis engine.
+The main analysis engine.
 
-- **`__init__(self, config_manager, billing_data)`**: Initializes the analyzer with a `ConfigManager` instance and a pandas DataFrame containing the billing data.
-- **`generate_comprehensive_analysis(self)`**: Runs the full suite of CUD analysis, including spend distribution, savings calculations, portfolio recommendations, and risk assessment. Returns a dictionary with the analysis results.
+- **`__init__(self, config_manager, billing_data)`**: Initializes the analyzer. It validates that the `billing_data` DataFrame contains the required columns (`Cost` and a SKU column) before proceeding.
+- **`generate_comprehensive_analysis(self)`**: Runs the full suite of CUD analysis.
 
 ### `reporting.py`
 
 #### `PDFReportGenerator`
 
-This class generates a professional, multi-page PDF report summarizing the analysis results.
+Generates professional, multi-page PDF reports.
 
-- **`__init__(self, config_manager)`**: Initializes the report generator with a `ConfigManager` instance.
-- **`generate_report(self, analysis)`**: Generates the PDF report from the analysis results dictionary. Returns the filename of the generated report.
+- **`__init__(self, config_manager)`**: Initializes the report generator.
+- **`generate_report(self, analysis)`**: Generates a PDF report. The theme (colors) and company logo are customizable via the `config.yaml` file.
 
-#### `create_dashboard(analysis)`
+#### `create_dashboard(analysis, config_manager)`
 
-This function generates an interactive Plotly dashboard to visualize the analysis results.
+Generates an interactive Plotly dashboard to visualize the analysis results.
 
 ### `gemini_service.py`
 
 #### `initialize_gemini(project_id, location)`
 
-Initializes and returns a Gemini client for AI-powered analysis.
+Initializes and returns a Gemini client.
 
-#### `generate_with_code_execution(client, model_id, prompt)`
+#### `generate_content(client, model_id, prompt, tools)`
 
-Generates content with code execution using the Gemini API, enabling interactive analysis and insights generation.
+Generates content using the Gemini API with a specified list of tools. This allows for flexible use of features like Code Execution and URL Context.
 
 ## 🖥️ Command-Line Interface (CLI)
 
@@ -94,27 +93,13 @@ The CLI provides an easy way to run the analysis from the command line.
 
 ### `finops-cli run`
 
-This command runs the entire analysis pipeline.
-
-**Options:**
-- `--config TEXT`: Path to the configuration file. Defaults to `config.yaml`.
-
-**Example:**
-```bash
-finops-cli run --config /path/to/your/config.yaml
-```
+Runs the entire analysis pipeline.
+- **`--config TEXT`**: Path to the configuration file.
 
 ### `finops-cli profile`
 
-This command profiles a specific dataset.
-
-**Options:**
-- `--dataset TEXT`: Name of the dataset to profile (e.g., "billing").
-
-**Example:**
-```bash
-finops-cli profile --dataset billing
-```
+Profiles a specific dataset.
+- **`--dataset TEXT`**: Name of the dataset to profile (e.g., "billing").
 
 ---
-*Author: andrewanolasco@ | Version: V1.0.0 | Date: August 2025*
+*Author: andrewanolasco@ (Maintained by Jules) | Version: V2.0.0 | Date: August 2025*

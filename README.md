@@ -1,15 +1,15 @@
 # ☁️ Cloud FinOps CUD Analysis Platform 💰
 
-A production-ready tool for analyzing Google Cloud Committed Use Discounts (CUDs) with CFO-level reporting capabilities, designed for Google Cloud notebook environments (Colab Enterprise, Vertex AI Workbench).
+A production-ready, staff-level tool for analyzing Google Cloud Committed Use Discounts (CUDs) with CFO-level reporting capabilities, designed for Google Cloud notebook environments (Colab Enterprise, Vertex AI Workbench).
 
 ## ✨ Features
 
-- **📈 Machine-Type-Specific Analysis**: 100% coverage of GCP machine types including GPUs
-- **🔄 Automated GCS Integration**: Direct loading from Google Cloud Storage buckets
-- **🔬 Advanced Analytics**: Portfolio optimization, Monte Carlo simulations, VaR/CVaR analysis
-- **📊 Executive Reporting**: Professional PDF reports with interactive dashboards
-- **🤖 AI-Powered Insights**: Use Gemini to perform interactive analysis and generate insights with natural language prompts
-- **⚙️ Zero Configuration**: Smart defaults with optional customization
+- **📈 Granular Analysis**: 100% coverage of GCP machine types, including GPUs.
+- **🔄 Automated GCS Integration**: Seamlessly loads data from Google Cloud Storage.
+- **🔬 Advanced Analytics**: Portfolio optimization, risk assessment, and forecasting.
+- **📊 Customizable Executive Reporting**: Generate professional PDF reports with configurable themes and company logos.
+- **🤖 AI-Powered Insights with Gemini 2.5 Pro**: Utilize Gemini 2.5 Pro for interactive analysis, including advanced features like **Code Execution** and **URL Context** to query data and external sources with natural language.
+- **⚙️ Zero Configuration Start**: Get started quickly with smart defaults, with deep customization available via a comprehensive `config.yaml`.
 
 ## 🚀 Quick Start
 
@@ -41,17 +41,18 @@ bash scripts/setup_gcp_notebook.sh
 Copy the example configuration file and customize it to your needs:
 
 ```bash
-cp config.yaml.example config.yaml
-# Edit config.yaml with your settings
+cp .env.example .env
+# Edit config.yaml with your settings, including GCS bucket and project ID.
+# You can also set environment variables in .env
 ```
 
-At a minimum, set your GCS bucket name and GCP project ID:
+At a minimum, set your GCS bucket name and GCP project ID in `config.yaml`:
 
 ```yaml
 gcs:
-  bucket_name: "your-bucket-name"  # Your GCS bucket with billing CSVs
+  bucket_name: "your-bucket-name"
 gcp:
-  project_id: "your-project-id"    # Your GCP project ID
+  project_id: "your-project-id"
 ```
 
 ### 3. 🏃‍♀️ Run Analysis
@@ -59,10 +60,10 @@ gcp:
 You can run the analysis using the **Jupyter Notebooks** or the **Command-Line Interface (CLI)**.
 
 #### Jupyter Notebooks
-- **`notebooks/2025-08_CUD_Analysis_Platform.ipynb`**: A step-by-step guide to running the core CUD analysis
-- **`notebooks/gemini_powered_analysis.ipynb`**: An interactive notebook that uses Gemini to perform ad-hoc analysis and generate insights
+- **`notebooks/CUD_Analysis_Walkthrough.ipynb`**: A comprehensive, step-by-step guide to running the core CUD analysis and generating reports.
+- **`notebooks/AI_Powered_Analysis.ipynb`**: An interactive notebook that uses Gemini 2.5 Pro to perform ad-hoc analysis using natural language, code execution, and URL context.
 
-Navigate to the notebook and execute the cells sequentially.
+Navigate to the notebooks and execute the cells sequentially.
 
 #### Command-Line Interface (CLI)
 ```bash
@@ -100,4 +101,4 @@ For issues or questions, please open an issue in the repository.
 
 ---
 
-*Author: andrewanolasco@ | Version: V1.0.0 | Date: August 2025*
+*Author: andrewanolasco@ (Maintained by Jules) | Version: V2.0.0 | Date: August 2025*
