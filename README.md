@@ -1,79 +1,55 @@
 # ☁️ Cloud FinOps CUD Analysis Platform 💰
 
-A production-ready, modular, and extensible tool for analyzing Google Cloud Committed Use Discounts (CUDs) with CFO-level reporting capabilities. This refactored version (V2.0.0) is designed for scalability, maintainability, and easy integration into automated FinOps workflows.
+A production-ready tool for analyzing Google Cloud Committed Use Discounts (CUDs) with CFO-level reporting capabilities, designed for Google Cloud notebook environments (Colab Enterprise, Vertex AI Workbench).
 
 ## ✨ Features
 
-- **🧩 Modular Architecture**: A clean, object-oriented design that separates concerns for data loading, analysis, and reporting.
-- **💻 Command-Line Interface (CLI)**: Run analyses from the command line for easy automation and integration.
-- **⚙️ Extensible Configuration**: A central `config.yaml` file, overridable with environment variables for flexible deployment.
-- **📈 Machine-Type-Specific Analysis**: 100% coverage of GCP machine types, including GPUs, with discount rates managed in an external config file.
-- **🔬 Advanced Analytics**: Optional modules for portfolio optimization, Monte Carlo simulations, and VaR/CVaR analysis.
-- **🔄 Automated GCS Integration**: Direct loading from Google Cloud Storage buckets.
-- **📊 Executive Reporting**: Professional PDF reports and interactive dashboards.
+- **📈 Machine-Type-Specific Analysis**: 100% coverage of GCP machine types including GPUs
+- **🔄 Automated GCS Integration**: Direct loading from Google Cloud Storage buckets
+- **🔬 Advanced Analytics**: Portfolio optimization, Monte Carlo simulations, VaR/CVaR analysis
+- **📊 Executive Reporting**: Professional PDF reports with interactive dashboards
+- **⚙️ Zero Configuration**: Smart defaults with optional customization
 
 ## 🚀 Quick Start
 
-### 1. 📦 Installation
+### 1. 📦 Installation & Setup
 
-Clone the repository and install the package in editable mode. This will also install all the necessary dependencies.
+Clone the repository and run the setup script. This will install all necessary dependencies.
 
+#### Option A: Google Colab / Colab Enterprise
+```python
+# First, clone the repository in your notebook
+!git clone https://github.com/TAMdrew/cud_analysis.git
+!cd cud_analysis && bash scripts/setup_gcp_notebook.sh
+```
+
+#### Option B: Vertex AI Workbench
 ```bash
+# Clone in terminal
 git clone https://github.com/TAMdrew/cud_analysis.git
 cd cud_analysis
-pip install -e .
+bash scripts/setup_gcp_notebook.sh
 ```
 
 ### 2. 📝 Configuration
 
-Copy the `config.yaml.example` to `config.yaml` and customize it to your needs. At a minimum, you should set your GCS bucket name.
+Edit `config.yaml` with your GCS bucket and other settings:
 
-```bash
-cp config.yaml.example config.yaml
-# Now edit config.yaml
+```yaml
+gcs:
+  bucket_name: "your-bucket-name"  # Your GCS bucket with billing CSVs
 ```
 
-You can also set environment variables to override the values in `config.yaml`. See `.env.example` for a list of available variables.
+### 3. 🏃‍♀️ Run Analysis
 
-### 3. 🖥️ CLI Usage
+You can run the analysis using the **Jupyter Notebook** or the **Command-Line Interface (CLI)**.
 
-The easiest way to run an analysis is with the command-line interface.
+#### Jupyter Notebook
+Navigate to `notebooks/2025-08_CUD_Analysis_Platform.ipynb` and execute the cells sequentially.
 
+#### Command-Line Interface (CLI)
 ```bash
 finops-cli run --config /path/to/your/config.yaml
-```
-
-If you don't provide a `--config` path, it will look for `config.yaml` in the current directory.
-
-### 4. 🐍 Library Usage (in a Notebook or Script)
-
-You can also use the library directly in your own Python scripts or Jupyter notebooks. See `notebooks/2025-08_CUD_Analysis_Platform.ipynb` for a detailed example.
-
-Here's a basic example:
-
-```python
-from finops_analysis_platform.config_manager import ConfigManager
-from finops_analysis_platform.data_loader import GCSDataLoader
-from finops_analysis_platform.core import CUDAnalyzer
-from finops_analysis_platform.reporting import create_dashboard, PDFReportGenerator
-
-# 1. Load Configuration
-config_manager = ConfigManager(config_path='config.yaml')
-
-# 2. Load Data
-gcs_config = config_manager.get('gcs', {})
-loader = GCSDataLoader(bucket_name=gcs_config.get('bucket_name'))
-data = loader.load_all_data()
-billing_data = data.get('billing')
-
-# 3. Run Analysis
-analyzer = CUDAnalyzer(config_manager=config_manager, billing_data=billing_data)
-analysis = analyzer.generate_comprehensive_analysis()
-
-# 4. Generate Reports
-pdf_generator = PDFReportGenerator(config_manager=config_manager)
-report_filename = pdf_generator.generate_report(analysis)
-print(f"Report generated: {report_filename}")
 ```
 
 ## 🗂️ Data Structure
@@ -95,6 +71,12 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for detailed usage instructions and API
 
 MIT License - See [LICENSE](LICENSE) for details.
 
+**Disclaimer**: This repository contains tools for Google Cloud cost optimization and is not affiliated with or officially supported by Google Cloud Platform.
+
+## 💬 Support
+
+For issues or questions, please open an issue in the repository.
+
 ---
 
-*Version: V2.0.0 | Date: August 2025*
+*Author: andrewanolasco@ | Version: V1.0.0 | Date: August 2025*

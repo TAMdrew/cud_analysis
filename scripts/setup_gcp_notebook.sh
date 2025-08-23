@@ -1,7 +1,7 @@
 #!/bin/bash
 # Setup script for Google Cloud Notebooks (Vertex AI Workbench / Colab Enterprise)
 # Author: andrewanolasco@
-# Version: 2.0.0
+# Version: V1.0.0
 # Date: August 2025
 
 echo "🚀 Setting up Cloud FinOps CUD Analysis for GCP Notebooks..."

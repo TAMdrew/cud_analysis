@@ -92,3 +92,6 @@ This command runs the entire analysis pipeline.
 ```bash
 finops-cli run --config /path/to/your/config.yaml
 ```
+
+---
+*Author: andrewanolasco@ | Version: V1.0.0 | Date: August 2025*
