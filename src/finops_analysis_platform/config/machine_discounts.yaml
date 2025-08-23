@@ -1,0 +1,61 @@
+# Machine-type-specific discount rates for Google Cloud
+# This file is loaded by the DiscountManager to provide accurate CUD calculations.
+# Version: 1.0.0
+# Last Updated: August 2025
+
+discounts:
+  # General Purpose
+  n1: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.30 }
+  n2: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  n2d: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  n4: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  e2: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  t2d: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  t2a: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+
+  # Compute Optimized
+  c2: { '1yr_resource': 0.37, '3yr_resource': 0.60, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  c2d: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  c3: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  c3d: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  c4: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  c4a: { '1yr_resource': 0.42, '3yr_resource': 0.65, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+
+  # Memory Optimized
+  m1: { '1yr_resource': 0.41, '3yr_resource': 0.70, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.30 }
+  m2: { '1yr_resource': 0.41, '3yr_resource': 0.60, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.30 }
+  m3: { '1yr_resource': 0.45, '3yr_resource': 0.70, '1yr_flex': null, '3yr_flex': 0.46, 'sud': 0.30 } # No 1-year Flex
+  m4: { '1yr_resource': 0.41, '3yr_resource': 0.70, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.30 }
+
+  # Storage Optimized
+  z3: { '1yr_resource': 0.37, '3yr_resource': 0.61, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+
+  # Accelerator Optimized
+  a2: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  a3: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  g2: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+
+  # High Performance Computing
+  h3: { '1yr_resource': null, '3yr_resource': 0.61, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 } # 3-year only
+
+  # GPU Instances
+  gpu-l4: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  gpu-t4: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  gpu-p4: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  gpu-v100: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  gpu-a100: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+  gpu-h100: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': 0.28, '3yr_flex': 0.46, 'sud': 0.20 }
+
+  # Special Services
+  gcve: { '1yr_resource': 0.28, '3yr_resource': .46, '1yr_flex': null, '3yr_flex': null, 'sud': null }
+  local-ssd: { '1yr_resource': 0.37, '3yr_resource': 0.55, '1yr_flex': null, '3yr_flex': null, 'sud': null }
+
+families:
+  General Purpose: [ 'n1', 'n2', 'n2d', 'n4', 'e2', 't2d', 't2a' ]
+  Compute Optimized: [ 'c2', 'c2d', 'c3', 'c3d', 'c4', 'c4a' ]
+  Memory Optimized: [ 'm1', 'm2', 'm3', 'm4' ]
+  Storage Optimized: [ 'z3' ]
+  Accelerator: [ 'a2', 'a3', 'g2' ]
+  High Performance: [ 'h3' ]
+  GPU: [ 'gpu-l4', 'gpu-t4', 'gpu-p4', 'gpu-v100', 'gpu-a100', 'gpu-h100' ]
+  Special: [ 'gcve', 'local-ssd' ]

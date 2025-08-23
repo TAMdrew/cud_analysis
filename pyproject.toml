@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finops-analysis-platform"
+version = "1.0.0"
+authors = [
+  { name="Andrew Anolasco", email="andrewanolasco@gmail.com" },
+]
+description = "A production-ready tool for analyzing Google Cloud Committed Use Discounts (CUDs) with CFO-level reporting capabilities."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "numpy-financial>=1.0.0",
+    "google-cloud-storage>=2.10.0",
+    "google-cloud-bigquery>=3.11.0",
+    "google-auth>=2.22.0",
+    "plotly>=5.15.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "scikit-learn>=1.3.0",
+    "scipy>=1.11.0",
+    "statsmodels>=0.14.0",
+    "reportlab>=4.0.0",
+    "pyyaml>=6.0",
+    "click>=8.0",
+    "python-dotenv>=1.0.0",
+    "ydata-profiling>=4.6.4",
+    "setuptools>=61.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/TAMdrew/cud_analysis"
+"Issues" = "https://github.com/TAMdrew/cud_analysis/issues"
+
+[project.scripts]
+finops-cli = "finops_analysis_platform.cli:main"

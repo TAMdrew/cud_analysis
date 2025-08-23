@@ -16,22 +16,16 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Import the modules to test
-try:
-    from advanced_finops_analytics import (
-        AdvancedCUDOptimizer,
-        CloudEconomicsModeler,
-        QuantitativeRiskAnalyzer,
-        enhance_with_advanced_analytics
-    )
-    ADVANCED_AVAILABLE = True
-except ImportError:
-    ADVANCED_AVAILABLE = False
-    print("⚠️ Advanced analytics module not found. Some tests will be skipped.")
+from finops_analysis_platform.advanced import (
+    AdvancedCUDOptimizer,
+    CloudEconomicsModeler,
+    QuantitativeRiskAnalyzer,
+    enhance_with_advanced_analytics
+)
 
 class TestAdvancedCUDOptimizer(unittest.TestCase):
     """Test suite for Advanced CUD Optimizer"""
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def setUp(self):
         """Set up test fixtures"""
         self.optimizer = AdvancedCUDOptimizer(risk_free_rate=0.03)
@@ -55,7 +49,6 @@ class TestAdvancedCUDOptimizer(unittest.TestCase):
             'c2': np.random.normal(20000, 2000, 36)
         }, index=dates)
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_portfolio_optimization(self):
         """Test portfolio optimization calculations"""
         result = self.optimizer.calculate_optimal_portfolio(
@@ -76,7 +69,6 @@ class TestAdvancedCUDOptimizer(unittest.TestCase):
         for allocation in result['optimal_allocation'].values():
             self.assertGreaterEqual(allocation, 0)
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_var_cvar_calculation(self):
         """Test Value at Risk and Conditional Value at Risk"""
         result = self.optimizer.calculate_var_cvar(
@@ -94,7 +86,6 @@ class TestAdvancedCUDOptimizer(unittest.TestCase):
         # Check volatility is positive
         self.assertGreater(result['cost_volatility'], 0)
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_black_scholes_valuation(self):
         """Test Black-Scholes option pricing for CUDs"""
         result = self.optimizer.black_scholes_cud_valuation(
@@ -118,7 +109,6 @@ class TestAdvancedCUDOptimizer(unittest.TestCase):
         self.assertGreaterEqual(result['greeks']['delta'], 0)
         self.assertLessEqual(result['greeks']['delta'], 1)
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_monte_carlo_simulation(self):
         """Test Monte Carlo simulation for cost projections"""
         result = self.optimizer.monte_carlo_simulation(
@@ -143,7 +133,6 @@ class TestAdvancedCUDOptimizer(unittest.TestCase):
 class TestCloudEconomicsModeler(unittest.TestCase):
     """Test suite for Cloud Economics Modeler"""
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def setUp(self):
         """Set up test fixtures"""
         self.modeler = CloudEconomicsModeler()
@@ -160,7 +149,6 @@ class TestCloudEconomicsModeler(unittest.TestCase):
             index=dates
         )
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_price_elasticity(self):
         """Test price elasticity calculation"""
         # Create price and demand series
@@ -172,7 +160,6 @@ class TestCloudEconomicsModeler(unittest.TestCase):
         # Elasticity should be negative (inverse relationship)
         self.assertLess(elasticity, 0)
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_commitment_ladder(self):
         """Test optimal commitment ladder strategy"""
         forecast = {
@@ -204,7 +191,6 @@ class TestCloudEconomicsModeler(unittest.TestCase):
 class TestQuantitativeRiskAnalyzer(unittest.TestCase):
     """Test suite for Quantitative Risk Analyzer"""
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def setUp(self):
         """Set up test fixtures"""
         self.analyzer = QuantitativeRiskAnalyzer()
@@ -215,7 +201,6 @@ class TestQuantitativeRiskAnalyzer(unittest.TestCase):
             np.random.normal(100000, 20000, 36)
         )
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_commitment_risk_score(self):
         """Test risk score calculation"""
         result = self.analyzer.calculate_commitment_risk_score(
@@ -236,7 +221,6 @@ class TestQuantitativeRiskAnalyzer(unittest.TestCase):
         self.assertIn('downside_risk', result['metrics'])
         self.assertIn('underutilization_probability', result['metrics'])
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_stress_test_scenarios(self):
         """Test stress testing scenarios"""
         result = self.analyzer.stress_test_scenarios(
@@ -259,7 +243,6 @@ class TestQuantitativeRiskAnalyzer(unittest.TestCase):
 class TestIntegration(unittest.TestCase):
     """Integration tests for the complete system"""
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_enhance_with_advanced_analytics(self):
         """Test the integration function"""
         # Create sample analysis results
@@ -278,7 +261,7 @@ class TestIntegration(unittest.TestCase):
         billing_data = pd.DataFrame({
             'Cost': np.random.normal(100000, 10000, 36),
             'Date': pd.date_range(start='2023-01-01', periods=36, freq='M')
-        })
+        }).set_index('Date')
 
         # Enhance with advanced analytics
         enhanced = enhance_with_advanced_analytics(
@@ -301,7 +284,6 @@ class TestIntegration(unittest.TestCase):
 class TestFinancialCalculations(unittest.TestCase):
     """Test financial calculations accuracy"""
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_npv_calculation(self):
         """Test NPV calculation accuracy"""
         optimizer = AdvancedCUDOptimizer(risk_free_rate=0.05)
@@ -323,7 +305,6 @@ class TestFinancialCalculations(unittest.TestCase):
 
         self.assertAlmostEqual(metrics.npv, expected_npv, places=2)
 
-    @unittest.skipIf(not ADVANCED_AVAILABLE, "Advanced analytics not available")
     def test_irr_calculation(self):
         """Test IRR calculation"""
         optimizer = AdvancedCUDOptimizer()
