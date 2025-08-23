@@ -1,8 +1,8 @@
-# Documentation
+# 📖 Documentation
 
-This document provides detailed documentation for the Cloud FinOps CUD Analysis Platform library.
+This document provides detailed documentation for the **Cloud FinOps CUD Analysis Platform** library.
 
-## Project Structure
+## 🏗️ Project Structure
 
 The project is organized as a standard Python package:
 
@@ -27,7 +27,7 @@ The project is organized as a standard Python package:
     └── test_core.py
 ```
 
-## Core Modules
+## 🧩 Core Modules
 
 ### `config_manager.py`
 
@@ -77,7 +77,7 @@ This class generates a professional, multi-page PDF report summarizing the analy
 
 This function generates an interactive Plotly dashboard to visualize the analysis results.
 
-## Command-Line Interface (CLI)
+## 🖥️ Command-Line Interface (CLI)
 
 The CLI provides an easy way to run the analysis from the command line.
 
