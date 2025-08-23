@@ -15,30 +15,25 @@ else
     echo "⚠️  Not running in a Google Cloud notebook environment"
 fi
 
-# Install required packages
-echo "📦 Installing Python packages..."
-pip install -q pandas numpy numpy-financial
-pip install -q google-cloud-storage google-cloud-bigquery google-auth
-pip install -q plotly matplotlib seaborn
-pip install -q scikit-learn scipy
-pip install -q reportlab
-pip install -q python-dotenv pyyaml
+# Install the project in editable mode, which also installs all dependencies
+echo "📦 Installing project and dependencies from pyproject.toml..."
+pip install -e .
 
 # Set up Google Cloud authentication
 echo "🔐 Setting up authentication..."
 if [[ -z "${GOOGLE_APPLICATION_CREDENTIALS}" ]]; then
-    echo "Using Application Default Credentials"
+    echo "Using Application Default Credentials. Please follow the prompts to authenticate."
     gcloud auth application-default login --quiet
 fi
 
 # Create necessary directories
 echo "📁 Creating directory structure..."
-mkdir -p data/sample logs reports
+mkdir -p data logs reports
 
 # Copy config template if not exists
 if [ ! -f "config.yaml" ]; then
-    echo "📝 Creating config.yaml from template..."
-    cp config.yaml.template config.yaml 2>/dev/null || echo "Please configure config.yaml"
+    echo "📝 Creating config.yaml from example..."
+    cp config.yaml.example config.yaml 2>/dev/null || echo "Please create and configure config.yaml"
 fi
 
 echo "✅ Setup complete! You can now run the notebook."
