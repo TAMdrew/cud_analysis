@@ -40,6 +40,14 @@ finops_venv/
 .idea/
 *.swp
 *.swo
+
+# Build artifacts
+build/
+dist/
+*.egg-info
+
+# Pytest cache
+.pytest_cache/
 *~
 .DS_Store
 
