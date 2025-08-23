@@ -104,6 +104,45 @@ class GCSDataLoader:
         logger.info("📊 Generated sample data for demonstration")
         return self.data_frames
 
+    def _print_summary(self):
+        """Print summary of loaded data"""
+        print("\n" + "="*60)
+        print("DATA LOADING SUMMARY")
+        print("="*60)
+
+        for data_type, df in self.data_frames.items():
+            if isinstance(df, pd.DataFrame):
+                print(f"\n{data_type.upper()}:")
+                print(f"  Rows: {len(df):,}")
+                print(f"  Columns: {len(df.columns)}")
+                print(f"  Memory: {df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
+
+                # Show column names
+                cols = list(df.columns)[:5]
+                if len(df.columns) > 5:
+                    cols.append('...')
+                print(f"  Columns: {', '.join(cols)}")
+
+        print("\n" + "="*60)
+
+    def save_report_to_gcs(self, filename: str, local_path: str):
+        """Save generated report to GCS"""
+        if not self.storage_client:
+            logger.warning("GCS client not available, report saved locally only")
+            return False
+
+        try:
+            bucket = self.storage_client.bucket(self.bucket_name)
+            blob = bucket.blob(f"reports/cfo_dashboard/{filename}")
+            blob.upload_from_filename(local_path)
+            logger.info(f"✅ Report uploaded to gs://{self.bucket_name}/reports/cfo_dashboard/{filename}")
+            return True
+        except Exception as e:
+            logger.error(f"Could not upload report to GCS: {e}")
+            return False
+
+# --- Standalone helper functions below ---
+
 def generate_sample_billing_data(rows=500) -> pd.DataFrame:
     """Generate a DataFrame with sample billing data."""
     machine_types = [
@@ -171,40 +210,3 @@ def generate_sample_spend_distribution() -> Dict[str, float]:
         'c4a': 45000,
         'z3': 40000
     }
-
-    def _print_summary(self):
-        """Print summary of loaded data"""
-        print("\n" + "="*60)
-        print("DATA LOADING SUMMARY")
-        print("="*60)
-
-        for data_type, df in self.data_frames.items():
-            if isinstance(df, pd.DataFrame):
-                print(f"\n{data_type.upper()}:")
-                print(f"  Rows: {len(df):,}")
-                print(f"  Columns: {len(df.columns)}")
-                print(f"  Memory: {df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
-
-                # Show column names
-                cols = list(df.columns)[:5]
-                if len(df.columns) > 5:
-                    cols.append('...')
-                print(f"  Columns: {', '.join(cols)}")
-
-        print("\n" + "="*60)
-
-    def save_report_to_gcs(self, filename: str, local_path: str):
-        """Save generated report to GCS"""
-        if not self.storage_client:
-            logger.warning("GCS client not available, report saved locally only")
-            return False
-
-        try:
-            bucket = self.storage_client.bucket(self.bucket_name)
-            blob = bucket.blob(f"reports/cfo_dashboard/{filename}")
-            blob.upload_from_filename(local_path)
-            logger.info(f"✅ Report uploaded to gs://{self.bucket_name}/reports/cfo_dashboard/{filename}")
-            return True
-        except Exception as e:
-            logger.error(f"Could not upload report to GCS: {e}")
-            return False
