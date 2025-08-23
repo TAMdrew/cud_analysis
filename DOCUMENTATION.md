@@ -77,6 +77,16 @@ This class generates a professional, multi-page PDF report summarizing the analy
 
 This function generates an interactive Plotly dashboard to visualize the analysis results.
 
+### `gemini_service.py`
+
+#### `initialize_gemini(project_id, location)`
+
+Initializes and returns a Gemini client.
+
+#### `generate_with_code_execution(client, model_id, prompt)`
+
+Generates content with code execution using the Gemini API.
+
 ## 🖥️ Command-Line Interface (CLI)
 
 The CLI provides an easy way to run the analysis from the command line.
