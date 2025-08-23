@@ -2,8 +2,8 @@
 """
 Advanced FinOps Analytics Module
 Sophisticated quantitative finance models for cloud cost optimization
-Version: 1.0.0
-Author: Senior Cloud Economics Team
+Author: andrewanolasco@
+Version: V1.0.0
 """
 
 import numpy as np

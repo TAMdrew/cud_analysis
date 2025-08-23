@@ -1,0 +1,91 @@
+# Cloud FinOps CUD Analysis Platform Configuration
+# Author: andrewanolasco@
+# Version: V1.0.0
+# Date: August 2025
+
+# ============================================
+# ENVIRONMENT CONFIGURATION
+# ============================================
+# Update these values with your organization's settings
+
+# Company Information
+company:
+  name: "Your Company Name"              # Your organization name
+  currency: "USD"                        # Currency for reports (USD, EUR, GBP, etc.)
+  # fiscal_year_start: "01-01"          # Optional: Only if needed for fiscal year reporting
+
+# Google Cloud Settings
+gcp:
+  project_id: "your-project-id"         # Your GCP Project ID (for authentication)
+
+# Google Cloud Storage Settings
+gcs:
+  bucket_name: "cud_analysis"           # Your GCS bucket name
+  billing_data_path: "data/billing/"    # Path to billing CSV files
+  recommendations_path: "data/recommendations/" # Path to cost recommender exports
+  manual_analysis_path: "data/manual_analysis/" # Path to manual analysis files
+  reports_output_path: "reports/cfo_dashboard/" # Where to save generated reports
+
+# BigQuery Settings (Optional)
+bigquery:
+  dataset_id: "billing_data"            # BigQuery dataset containing billing export
+  table_id: "gcp_billing_export"        # Table name for billing data
+  location: "US"                        # BigQuery dataset location
+
+# Analysis Parameters
+analysis:
+  # The system will automatically use all available data if these are not set
+  # lookback_days: 90                   # Optional: Limit analysis to last N days
+  # If not set, uses all available data (recommended)
+
+  # Analysis will adapt to your data:
+  # - 1 day of data: Daily analysis
+  # - 7-30 days: Weekly patterns
+  # - 30-90 days: Monthly trends
+  # - 90+ days: Quarterly/annual patterns
+
+  forecast_months: 3                    # Months to forecast ahead
+  target_utilization: 85                # Target CUD utilization percentage
+  minimum_acceptable_utilization: 60    # Minimum acceptable utilization
+
+# CUD Strategy Settings
+cud_strategy:
+  base_layer_coverage: 40               # % of stable workload for 3-year CUDs
+  growth_layer_coverage: 30             # % for 1-year CUDs
+  flex_layer_coverage: 20               # % for Flex CUDs
+  burst_layer_coverage: 10              # % kept as on-demand
+
+# Financial Parameters
+financial:
+  discount_rate: 0.10                   # Discount rate for NPV calculations (10%)
+  tax_rate: 0.21                        # Corporate tax rate (21%)
+  risk_free_rate: 0.04                  # Risk-free rate for financial calculations
+
+# API Keys (Optional - for enhanced features)
+api_keys:
+  google_gemini_api_key: ""              # For AI-powered insights (optional)
+
+# Report Settings
+reporting:
+  include_ai_insights: false            # Enable AI insights (requires Gemini API key)
+  generate_pdf: true                    # Generate PDF reports
+  send_email_notifications: false       # Email reports when complete
+  email_recipients: []                  # List of email addresses
+
+# Monitoring & Alerts
+monitoring:
+  enable_alerts: true                   # Enable cost anomaly alerts
+  alert_threshold_percentage: 20        # Alert if costs increase by this %
+  check_frequency_hours: 24             # How often to check for anomalies
+
+# Advanced Settings
+advanced:
+  enable_monte_carlo: true              # Enable Monte Carlo simulations
+  simulation_iterations: 10000          # Number of Monte Carlo iterations
+  enable_portfolio_optimization: true   # Enable Markowitz portfolio optimization
+  enable_stress_testing: true           # Enable stress testing scenarios
+
+# Logging
+logging:
+  level: "INFO"                         # Logging level (DEBUG, INFO, WARNING, ERROR)
+  file_path: "logs/finops_analysis.log" # Log file location

@@ -2,6 +2,8 @@
 """
 Test Suite for Advanced FinOps Analytics
 Validates quantitative models and financial calculations
+Author: andrewanolasco@
+Version: V1.0.0
 """
 
 import unittest
