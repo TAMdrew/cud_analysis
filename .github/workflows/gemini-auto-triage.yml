@@ -174,6 +174,28 @@ jobs:
               core.info(`No labels to set for #${issueNumber}, leaving as is${explanation}`);
             }
 
+      - name: 'Add Triage Comment'
+        if: |-
+          ${{ steps.gemini_issue_analysis.outputs.summary != '' }}
+        uses: actions/github-script@v6
+        with:
+          github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
+          script: |
+            const rawLabels = `${{ steps.gemini_issue_analysis.outputs.summary }}`;
+            const trimmedLabels = rawLabels.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '').trim();
+            const parsedLabels = JSON.parse(trimmedLabels);
+            if (parsedLabels.labels_to_set && parsedLabels.labels_to_set.length > 0) {
+              const issueNumber = parseInt('${{ github.event.issue.number }}');
+              const explanation = parsedLabels.explanation ? `\n\n**Explanation:** ${parsedLabels.explanation}` : '';
+              const commentBody = `🤖 This issue has been automatically triaged and labeled with the following labels: ${parsedLabels.labels_to_set.map(l => `\`${l}\``).join(', ')}.${explanation}`;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: commentBody
+              });
+            }
+
       - name: 'Post Issue Analysis Failure Comment'
         if: |-
           ${{ failure() && steps.gemini_issue_analysis.outcome == 'failure' }}

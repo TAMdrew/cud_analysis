@@ -185,8 +185,15 @@ jobs:
                   issue_number: issueNumber,
                   labels: entry.labels_to_set
                 });
-                const explanation = entry.explanation ? ` - ${entry.explanation}` : '';
-                core.info(`Successfully set labels for #${issueNumber}: ${entry.labels_to_set.join(', ')}${explanation}`);
+                const explanation = entry.explanation ? `\n\n**Explanation:** ${entry.explanation}` : '';
+                const commentBody = `🤖 This issue has been automatically triaged and labeled with the following labels: ${entry.labels_to_set.map(l => `\`${l}\``).join(', ')}.${explanation}`;
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body: commentBody
+                });
+                core.info(`Successfully set labels and commented on #${issueNumber}: ${entry.labels_to_set.join(', ')}${explanation}`);
               } else {
                 // If no labels to set, leave the issue as is
                 core.info(`No labels to set for #${issueNumber}, leaving as is`);
