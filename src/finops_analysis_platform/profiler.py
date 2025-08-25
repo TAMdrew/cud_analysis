@@ -1,6 +1,14 @@
+"""Generates data profiling reports using ydata-profiling.
+
+This module provides a function to create and save a detailed
+data quality and exploratory data analysis report for a pandas DataFrame.
+"""
+
+from pathlib import Path
+
 import pandas as pd
 from ydata_profiling import ProfileReport
-from pathlib import Path
+
 
 def create_profile_report(df: pd.DataFrame, title: str, output_dir: str = 'profiling_reports'):
     """
