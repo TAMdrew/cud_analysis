@@ -17,7 +17,7 @@ fi
 
 # Install the project in editable mode, which also installs all dependencies
 echo "📦 Installing project and dependencies from pyproject.toml..."
-pip install -e .
+pip install -e .[dev]
 
 # Set up Google Cloud authentication
 echo "🔐 Setting up authentication..."

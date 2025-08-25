@@ -9,8 +9,8 @@ import logging
 from typing import List, Optional
 
 import pandas as pd
-from google.api_core import exceptions
 from google import genai
+from google.api_core import exceptions
 from google.genai import types
 
 logger = logging.getLogger(__name__)
@@ -35,12 +35,12 @@ def _get_model_for_prompt(prompt: str) -> str:
     if len(prompt) > COMPLEX_PROMPT_THRESHOLD:
         logger.info(
             "Prompt is long (%d chars). Using complex model: %s",
-            len(prompt), COMPLEX_MODEL
+            len(prompt),
+            COMPLEX_MODEL,
         )
         return COMPLEX_MODEL
     logger.info(
-        "Prompt is short (%d chars). Using simple model: %s",
-        len(prompt), SIMPLE_MODEL
+        "Prompt is short (%d chars). Using simple model: %s", len(prompt), SIMPLE_MODEL
     )
     return SIMPLE_MODEL
 
@@ -68,13 +68,11 @@ def create_cached_content_from_df(
         content_part = types.Part.from_text(text=csv_data)
         config = types.CreateCachedContentConfig(
             contents=[types.Content(parts=[content_part], role="user")],
-            ttl=f'{ttl_seconds}s'
+            ttl=f"{ttl_seconds}s",
         )
 
         cached_content = client.caches.create(model=model, config=config)
-        logger.info(
-            "Successfully created cached content: %s", cached_content.name
-        )
+        logger.info("Successfully created cached content: %s", cached_content.name)
         return cached_content.name
     except (exceptions.GoogleAPICallError, ValueError) as e:
         logger.error("Failed to create cached content: %s", e)
@@ -109,8 +107,7 @@ def generate_content(
         # Note: When using a cache, tools cannot be used.
         generation_config.cached_content = cached_content_name
         logger.info(
-            "Using cached content: %s. Tools will be disabled.",
-            cached_content_name
+            "Using cached content: %s. Tools will be disabled.", cached_content_name
         )
     else:
         generation_config.tools = tools or []

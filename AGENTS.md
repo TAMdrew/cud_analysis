@@ -28,7 +28,7 @@ To set up the development environment, run the setup script from the repository 
 bash scripts/setup_gcp_notebook.sh
 ```
 
-This will install all necessary dependencies listed in `requirements.txt`.
+This will install all necessary dependencies listed in `pyproject.toml`, including the development dependencies.
 
 ### 2. Running the Analysis
 
