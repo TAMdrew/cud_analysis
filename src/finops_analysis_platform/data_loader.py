@@ -201,3 +201,18 @@ class GCSDataLoader:
         except Exception as e:
             logger.error(f"Could not upload report to GCS: {e}")
             return False
+
+
+def load_data_from_config(config_manager):
+    """
+    Loads all datasets from GCS based on the application configuration.
+
+    Args:
+        config_manager: An instance of ConfigManager.
+
+    Returns:
+        A dictionary containing the loaded dataframes.
+    """
+    gcs_config = config_manager.get('gcs', {})
+    loader = GCSDataLoader(bucket_name=gcs_config.get('bucket_name'))
+    return loader.load_all_data()
