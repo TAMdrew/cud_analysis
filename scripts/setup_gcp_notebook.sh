@@ -36,5 +36,16 @@ if [ ! -f "config.yaml" ]; then
     cp config.yaml.example config.yaml 2>/dev/null || echo "Please create and configure config.yaml"
 fi
 
+# Create a dated copy of the main notebook for this month's analysis
+NOTEBOOK_TEMPLATE="notebooks/CUD_Analysis_Walkthrough.ipynb"
+DATED_NOTEBOOK="notebooks/$(date +%Y-%m)_CUD_Analysis_Platform.ipynb"
+
+if [ -f "$NOTEBOOK_TEMPLATE" ]; then
+    cp "$NOTEBOOK_TEMPLATE" "$DATED_NOTEBOOK"
+    echo "✅ Created a new notebook for this month's analysis: ${DATED_NOTEBOOK}"
+else
+    echo "⚠️  Warning: Notebook template not found at ${NOTEBOOK_TEMPLATE}"
+fi
+
 echo "✅ Setup complete! You can now run the notebook."
-echo "📓 Open notebooks/2025-08_CUD_Analysis_Platform.ipynb to start"
+echo "📓 Open ${DATED_NOTEBOOK} to start"
