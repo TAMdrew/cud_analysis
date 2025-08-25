@@ -13,27 +13,35 @@ A production-ready, staff-level tool for analyzing Google Cloud Committed Use Di
 
 ## 🚀 Quick Start
 
-### 1. 📦 Installation & Setup
+### 1. 🛠️ Installation & Setup
 
-Clone the repository and run the setup script. This will install all necessary dependencies.
+Getting started is easy! Just clone the repository and run the setup script. This script handles everything, from installing dependencies to preparing your analysis notebook.
 
-#### Option A: Google Colab / Colab Enterprise
+#### Option A: Google Colab / Colab Enterprise ☁️
 ```python
-# First, clone the repository in your notebook
+# 1. Clone the repository in your notebook
 !git clone https://github.com/TAMdrew/cud_analysis.git
+
+# 2. Run the setup script
 !cd cud_analysis && bash scripts/setup_gcp_notebook.sh
 
-# Import the modules
+# 💡 **Note:** The setup script creates a new, dated copy of the main analysis notebook for you (e.g., `notebooks/2025-08_CUD_Analysis_Platform.ipynb`). This is the notebook you should use!
+
+# 3. Add the project to your Python path
 import sys
 sys.path.append('/content/cud_analysis')
 ```
 
-#### Option B: Vertex AI Workbench
+#### Option B: Vertex AI Workbench 💻
 ```bash
-# Clone in terminal
+# 1. Clone the repository in the terminal
 git clone https://github.com/TAMdrew/cud_analysis.git
+
+# 2. Navigate into the directory and run the setup script
 cd cud_analysis
 bash scripts/setup_gcp_notebook.sh
+
+# 💡 **Note:** The setup script creates a new, dated copy of the main analysis notebook for you (e.g., `notebooks/2025-08_CUD_Analysis_Platform.ipynb`). This is the notebook you should use!
 ```
 
 ### 2. 📝 Configuration
