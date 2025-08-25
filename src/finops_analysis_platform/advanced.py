@@ -20,12 +20,13 @@ from scipy import optimize, stats
 from scipy.stats import norm
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
-warnings.filterwarnings('ignore', category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 logger = logging.getLogger(__name__)
 
 
 class RiskModel(Enum):
     """Enumeration for risk modeling approaches."""
+
     VAR = "Value at Risk"
     CVAR = "Conditional Value at Risk"
     MONTE_CARLO = "Monte Carlo Simulation"
@@ -35,6 +36,7 @@ class RiskModel(Enum):
 @dataclass
 class FinancialMetrics:
     """A container for key financial metrics."""
+
     npv: float
     irr: float
     payback_period: float
@@ -55,9 +57,7 @@ class AdvancedCUDOptimizer:
 
     # pylint: disable=too-many-locals
     def calculate_optimal_portfolio(
-        self,
-        machine_returns: Dict[str, float],
-        historical_usage: pd.DataFrame
+        self, machine_returns: Dict[str, float], historical_usage: pd.DataFrame
     ) -> Dict[str, Any]:
         """Applies Modern Portfolio Theory to CUD allocation."""
         returns: Dict[str, float] = {}
@@ -66,13 +66,13 @@ class AdvancedCUDOptimizer:
                 series = historical_usage[machine_type]
                 log_returns = np.log(series / series.shift(1)).dropna()
                 returns[machine_type] = log_returns.mean() * 252
-                self.volatility_estimates[machine_type] = (
-                    log_returns.std() * np.sqrt(252)
+                self.volatility_estimates[machine_type] = log_returns.std() * np.sqrt(
+                    252
                 )
 
         n_assets = len(returns)
         if n_assets == 0:
-            return {'optimal_allocation': {}}
+            return {"optimal_allocation": {}}
 
         cov_matrix = np.eye(n_assets) * 0.1
 
@@ -81,52 +81,54 @@ class AdvancedCUDOptimizer:
             p_std = np.sqrt(np.dot(weights.T, np.dot(cov, weights)))
             return -(p_return - rf_rate) / p_std if p_std > 0 else -np.inf
 
-        constraints = {'type': 'eq', 'fun': lambda x: np.sum(x) - 1}
+        constraints = {"type": "eq", "fun": lambda x: np.sum(x) - 1}
         bounds = tuple((0, 1) for _ in range(n_assets))
-        initial_guess = np.array([1/n_assets] * n_assets)
+        initial_guess = np.array([1 / n_assets] * n_assets)
 
         result = optimize.minimize(
-            neg_sharpe, initial_guess,
+            neg_sharpe,
+            initial_guess,
             args=(np.array(list(returns.values())), cov_matrix, self.risk_free_rate),
-            method='SLSQP', bounds=bounds, constraints=constraints)
+            method="SLSQP",
+            bounds=bounds,
+            constraints=constraints,
+        )
 
         optimal_weights = dict(zip(returns.keys(), result.x))
         portfolio_return = np.sum(result.x * np.array(list(returns.values())))
 
         return {
-            'optimal_allocation': optimal_weights,
-            'expected_return': portfolio_return,
-            'sharpe_ratio': -result.fun if result.fun != np.inf else 0,
-            'portfolio_volatility': np.sqrt(result.fun) if result.fun >= 0 else 0,
-            'diversification_ratio': 1 / np.sum(result.x ** 2)
+            "optimal_allocation": optimal_weights,
+            "expected_return": portfolio_return,
+            "sharpe_ratio": -result.fun if result.fun != np.inf else 0,
+            "portfolio_volatility": np.sqrt(result.fun) if result.fun >= 0 else 0,
+            "diversification_ratio": 1 / np.sum(result.x**2),
         }
 
     def calculate_var_cvar(
         self,
         monthly_costs: np.ndarray,
         confidence_level: float = 0.95,
-        time_horizon: int = 12
+        time_horizon: int = 12,
     ) -> Dict[str, Any]:
         """Calculates Value at Risk and Conditional Value at Risk."""
         mu, sigma = stats.norm.fit(monthly_costs)
         n_simulations = 10000
-        simulated_costs = np.random.normal(
-            mu, sigma, (n_simulations, time_horizon)
-        )
+        simulated_costs = np.random.normal(mu, sigma, (n_simulations, time_horizon))
         total_costs = np.sum(simulated_costs, axis=1)
-        var_threshold = np.percentile(
-            total_costs, (1 - confidence_level) * 100
-        )
+        var_threshold = np.percentile(total_costs, (1 - confidence_level) * 100)
         cvar = np.mean(total_costs[total_costs >= var_threshold])
 
         return {
-            'var_95': var_threshold,
-            'cvar_95': cvar,
-            'expected_cost': np.mean(total_costs),
-            'cost_volatility': np.std(total_costs),
-            'worst_case_scenario': np.max(total_costs),
-            'best_case_scenario': np.min(total_costs),
-            'probability_exceeding_budget': lambda budget: np.mean(total_costs > budget)
+            "var_95": var_threshold,
+            "cvar_95": cvar,
+            "expected_cost": np.mean(total_costs),
+            "cost_volatility": np.std(total_costs),
+            "worst_case_scenario": np.max(total_costs),
+            "best_case_scenario": np.min(total_costs),
+            "probability_exceeding_budget": lambda budget: np.mean(
+                total_costs > budget
+            ),
         }
 
     # pylint: disable=too-many-arguments
@@ -136,35 +138,49 @@ class AdvancedCUDOptimizer:
         strike_price: float,
         time_to_maturity: float,
         volatility: float,
-        discount_rate: float
+        discount_rate: float,
     ) -> Dict[str, Any]:
         """Applies Black-Scholes model to value a CUD as a call option."""
-        d1 = (np.log(spot_price / strike_price) +
-              (discount_rate + 0.5 * volatility**2) * time_to_maturity) / \
-             (volatility * np.sqrt(time_to_maturity))
+        d1 = (
+            np.log(spot_price / strike_price)
+            + (discount_rate + 0.5 * volatility**2) * time_to_maturity
+        ) / (volatility * np.sqrt(time_to_maturity))
         d2 = d1 - volatility * np.sqrt(time_to_maturity)
 
-        call_value = (spot_price * norm.cdf(d1) -
-                      strike_price * np.exp(-discount_rate * time_to_maturity) *
-                      norm.cdf(d2))
+        call_value = spot_price * norm.cdf(d1) - strike_price * np.exp(
+            -discount_rate * time_to_maturity
+        ) * norm.cdf(d2)
 
         delta = norm.cdf(d1)
         gamma = norm.pdf(d1) / (spot_price * volatility * np.sqrt(time_to_maturity))
-        theta = (-(spot_price * norm.pdf(d1) * volatility) / (2 * np.sqrt(time_to_maturity)) -
-                discount_rate * strike_price * np.exp(-discount_rate * time_to_maturity) * norm.cdf(d2))
+        theta = -(spot_price * norm.pdf(d1) * volatility) / (
+            2 * np.sqrt(time_to_maturity)
+        ) - discount_rate * strike_price * np.exp(
+            -discount_rate * time_to_maturity
+        ) * norm.cdf(
+            d2
+        )
         vega = spot_price * norm.pdf(d1) * np.sqrt(time_to_maturity)
-        rho = strike_price * time_to_maturity * np.exp(-self.risk_free_rate * time_to_maturity) * norm.cdf(d2)
+        rho = (
+            strike_price
+            * time_to_maturity
+            * np.exp(-self.risk_free_rate * time_to_maturity)
+            * norm.cdf(d2)
+        )
 
         return {
-            'option_value': call_value,
-            'intrinsic_value': max(spot_price - strike_price, 0),
-            'time_value': call_value - max(spot_price - strike_price, 0),
-            'greeks': {
-                'delta': delta, 'gamma': gamma, 'theta': theta,
-                'vega': vega, 'rho': rho
+            "option_value": call_value,
+            "intrinsic_value": max(spot_price - strike_price, 0),
+            "time_value": call_value - max(spot_price - strike_price, 0),
+            "greeks": {
+                "delta": delta,
+                "gamma": gamma,
+                "theta": theta,
+                "vega": vega,
+                "rho": rho,
             },
-            'break_even_utilization': strike_price / spot_price,
-            'implied_volatility_target': volatility
+            "break_even_utilization": strike_price / spot_price,
+            "implied_volatility_target": volatility,
         }
 
     def monte_carlo_simulation(
@@ -173,41 +189,41 @@ class AdvancedCUDOptimizer:
         drift: float,
         volatility: float,
         time_periods: int = 36,
-        n_simulations: int = 10000
+        n_simulations: int = 10000,
     ) -> Dict[str, Any]:
         """Runs a Monte Carlo simulation for cloud cost projections."""
-        dt = 1/12
+        dt = 1 / 12
         random_shocks = np.random.normal(0, 1, (n_simulations, time_periods))
         price_paths = np.zeros((n_simulations, time_periods + 1))
         price_paths[:, 0] = initial_cost
 
         for t in range(1, time_periods + 1):
-            price_paths[:, t] = price_paths[:, t-1] * np.exp(
-                (drift - 0.5 * volatility**2) * dt +
-                volatility * np.sqrt(dt) * random_shocks[:, t-1]
+            price_paths[:, t] = price_paths[:, t - 1] * np.exp(
+                (drift - 0.5 * volatility**2) * dt
+                + volatility * np.sqrt(dt) * random_shocks[:, t - 1]
             )
 
         final_costs = price_paths[:, -1]
         return {
-            'expected_final_cost': np.mean(final_costs),
-            'median_final_cost': np.median(final_costs),
-            'cost_std_dev': np.std(final_costs),
-            'percentile_5': np.percentile(final_costs, 5),
-            'percentile_95': np.percentile(final_costs, 95),
-            'probability_cost_doubles': np.mean(final_costs > 2 * initial_cost),
-            'max_drawdown': np.min(np.min(price_paths, axis=1) / initial_cost - 1),
-            'paths_summary': {
-                'mean_path': np.mean(price_paths, axis=0),
-                'upper_bound': np.percentile(price_paths, 95, axis=0),
-                'lower_bound': np.percentile(price_paths, 5, axis=0)
-            }
+            "expected_final_cost": np.mean(final_costs),
+            "median_final_cost": np.median(final_costs),
+            "cost_std_dev": np.std(final_costs),
+            "percentile_5": np.percentile(final_costs, 5),
+            "percentile_95": np.percentile(final_costs, 95),
+            "probability_cost_doubles": np.mean(final_costs > 2 * initial_cost),
+            "max_drawdown": np.min(np.min(price_paths, axis=1) / initial_cost - 1),
+            "paths_summary": {
+                "mean_path": np.mean(price_paths, axis=0),
+                "upper_bound": np.percentile(price_paths, 95, axis=0),
+                "lower_bound": np.percentile(price_paths, 5, axis=0),
+            },
         }
 
     def calculate_financial_metrics(
         self,
         initial_investment: float,
         cash_flows: List[float],
-        discount_rate: Optional[float] = None
+        discount_rate: Optional[float] = None,
     ) -> FinancialMetrics:
         """Calculates comprehensive financial metrics for a CUD investment."""
         if discount_rate is None:
@@ -221,19 +237,35 @@ class AdvancedCUDOptimizer:
 
         cumulative_cf = np.cumsum([-initial_investment] + cash_flows)
         payback_idx = np.where(cumulative_cf > 0)[0]
-        payback_period = payback_idx[0] + 1 if payback_idx.size > 0 else float('inf')
+        payback_period = payback_idx[0] + 1 if payback_idx.size > 0 else float("inf")
 
         total_return = sum(cash_flows)
-        roi = (total_return - initial_investment) / initial_investment if initial_investment else 0
+        roi = (
+            (total_return - initial_investment) / initial_investment
+            if initial_investment
+            else 0
+        )
 
-        break_even = initial_investment / np.mean(cash_flows) if np.mean(cash_flows) > 0 else float('inf')
+        break_even = (
+            initial_investment / np.mean(cash_flows)
+            if np.mean(cash_flows) > 0
+            else float("inf")
+        )
 
-        returns = np.array(cash_flows) / initial_investment if initial_investment else np.array([0])
+        returns = (
+            np.array(cash_flows) / initial_investment
+            if initial_investment
+            else np.array([0])
+        )
         risk_adjusted = (np.mean(returns) - discount_rate) / (np.std(returns) + 1e-10)
 
         return FinancialMetrics(
-            npv=npv, irr=irr, payback_period=payback_period, roi=roi,
-            break_even_point=break_even, risk_adjusted_return=risk_adjusted
+            npv=npv,
+            irr=irr,
+            payback_period=payback_period,
+            roi=roi,
+            break_even_point=break_even,
+            risk_adjusted_return=risk_adjusted,
         )
 
 
@@ -254,15 +286,19 @@ class CloudEconomicsModeler:
         self,
         historical_usage: pd.Series,
         periods: int = 12,
-        method: str = 'holt_winters'
+        method: str = "holt_winters",
     ) -> Dict[str, Any]:
         """Forecasts demand using time series analysis."""
         forecast, lower_bound, upper_bound = None, None, None
 
-        if method == 'holt_winters' and len(historical_usage) >= 24:
+        if method == "holt_winters" and len(historical_usage) >= 24:
             model = ExponentialSmoothing(
-                historical_usage, seasonal_periods=12, trend='add',
-                seasonal='add', initialization_method="estimated")
+                historical_usage,
+                seasonal_periods=12,
+                trend="add",
+                seasonal="add",
+                initialization_method="estimated",
+            )
             fit = model.fit()
             forecast = fit.forecast(periods)
             residuals = historical_usage - fit.fittedvalues
@@ -271,56 +307,59 @@ class CloudEconomicsModeler:
             upper_bound = forecast + 1.96 * std_error
 
         return {
-            'forecast': forecast,
-            'lower_95': lower_bound,
-            'upper_95': upper_bound,
+            "forecast": forecast,
+            "lower_95": lower_bound,
+            "upper_95": upper_bound,
         }
 
-    def calculate_optimal_commitment_ladder(self,
-                                           forecast: Dict,
-                                           risk_tolerance: float = 0.5) -> Dict:
+    def calculate_optimal_commitment_ladder(
+        self, forecast: Dict, risk_tolerance: float = 0.5
+    ) -> Dict:
         """Designs an optimal CUD commitment ladder strategy."""
-        if 'forecast' not in forecast or forecast['forecast'] is None:
+        if "forecast" not in forecast or forecast["forecast"] is None:
             return {}
 
-        base_demand = forecast['forecast'].mean()
+        base_demand = forecast["forecast"].mean()
 
-        if 'lower_95' in forecast and forecast['lower_95'] is not None:
-            high_confidence_level = forecast['lower_95'].mean()
+        if "lower_95" in forecast and forecast["lower_95"] is not None:
+            high_confidence_level = forecast["lower_95"].mean()
         else:
-            std_dev = forecast['forecast'].std() if forecast['forecast'].std() > 0 else base_demand * 0.1
+            std_dev = (
+                forecast["forecast"].std()
+                if forecast["forecast"].std() > 0
+                else base_demand * 0.1
+            )
             high_confidence_level = base_demand - 1.96 * std_dev
 
         if risk_tolerance < 0.3:  # Conservative
             ladder = {
-                '3_year_commitment': high_confidence_level * 0.5,
-                '1_year_commitment': high_confidence_level * 0.3,
-                'flex_commitment': high_confidence_level * 0.2,
-                'on_demand_buffer': base_demand - high_confidence_level
+                "3_year_commitment": high_confidence_level * 0.5,
+                "1_year_commitment": high_confidence_level * 0.3,
+                "flex_commitment": high_confidence_level * 0.2,
+                "on_demand_buffer": base_demand - high_confidence_level,
             }
         elif risk_tolerance < 0.7:  # Moderate
             ladder = {
-                '3_year_commitment': high_confidence_level * 0.6,
-                '1_year_commitment': high_confidence_level * 0.25,
-                'flex_commitment': high_confidence_level * 0.15,
-                'on_demand_buffer': base_demand - high_confidence_level
+                "3_year_commitment": high_confidence_level * 0.6,
+                "1_year_commitment": high_confidence_level * 0.25,
+                "flex_commitment": high_confidence_level * 0.15,
+                "on_demand_buffer": base_demand - high_confidence_level,
             }
         else:  # Aggressive
             ladder = {
-                '3_year_commitment': base_demand * 0.7,
-                '1_year_commitment': base_demand * 0.2,
-                'flex_commitment': base_demand * 0.1,
-                'on_demand_buffer': base_demand * 0.1
+                "3_year_commitment": base_demand * 0.7,
+                "1_year_commitment": base_demand * 0.2,
+                "flex_commitment": base_demand * 0.1,
+                "on_demand_buffer": base_demand * 0.1,
             }
 
-        total_savings = (ladder.get('3_year_commitment', 0) * 0.55 +
-                         ladder.get('1_year_commitment', 0) * 0.37 +
-                         ladder.get('flex_commitment', 0) * 0.28)
+        total_savings = (
+            ladder.get("3_year_commitment", 0) * 0.55
+            + ladder.get("1_year_commitment", 0) * 0.37
+            + ladder.get("flex_commitment", 0) * 0.28
+        )
 
-        return {
-            'ladder_strategy': ladder,
-            'expected_monthly_savings': total_savings
-        }
+        return {"ladder_strategy": ladder, "expected_monthly_savings": total_savings}
 
 
 # pylint: disable=too-few-public-methods
@@ -331,25 +370,29 @@ class QuantitativeRiskAnalyzer:
         self,
         commitment_amount: float,
         historical_usage: pd.Series,
-        commitment_period: int
+        commitment_period: int,
     ) -> Dict[str, Any]:
         """Calculates a comprehensive risk score for a CUD commitment."""
         del commitment_period  # Unused in this risk model version.
 
         mean_usage = historical_usage.mean()
         std_usage = historical_usage.std()
-        cv = std_usage / mean_usage if mean_usage > 0 else float('inf')
+        cv = std_usage / mean_usage if mean_usage > 0 else float("inf")
 
         downside_deviations = historical_usage[historical_usage < commitment_amount]
-        downside_risk = np.mean(
-            (commitment_amount - downside_deviations) / commitment_amount
-        ) if not downside_deviations.empty else 0
+        downside_risk = (
+            np.mean((commitment_amount - downside_deviations) / commitment_amount)
+            if not downside_deviations.empty
+            else 0
+        )
 
-        prob_underutilization = norm.cdf(
-            (commitment_amount - mean_usage) / std_usage
-        ) if std_usage > 0 else 0.5
+        prob_underutilization = (
+            norm.cdf((commitment_amount - mean_usage) / std_usage)
+            if std_usage > 0
+            else 0.5
+        )
 
-        risk_score = (cv * 20 + downside_risk * 50 + prob_underutilization * 30)
+        risk_score = cv * 20 + downside_risk * 50 + prob_underutilization * 30
 
         if risk_score < 30:
             risk_category = "LOW"
@@ -359,13 +402,13 @@ class QuantitativeRiskAnalyzer:
             risk_category = "HIGH"
 
         return {
-            'risk_score': min(risk_score, 100),
-            'risk_category': risk_category,
-            'metrics': {
-                'coefficient_of_variation': cv,
-                'downside_risk': downside_risk,
-                'underutilization_probability': prob_underutilization,
-            }
+            "risk_score": min(risk_score, 100),
+            "risk_category": risk_category,
+            "metrics": {
+                "coefficient_of_variation": cv,
+                "downside_risk": downside_risk,
+                "underutilization_probability": prob_underutilization,
+            },
         }
 
     def stress_test_scenarios(
@@ -373,30 +416,40 @@ class QuantitativeRiskAnalyzer:
     ) -> Dict[str, Any]:
         """Runs stress test scenarios for risk assessment."""
         scenarios = {
-            'baseline': {'usage_change': 0, 'cost_impact': 0},
-            'mild_recession': {'usage_change': -0.20},
-            'severe_recession': {'usage_change': -0.40},
-            'rapid_growth': {'usage_change': 0.50},
-            'technology_shift': {'usage_change': -0.30}
+            "baseline": {"usage_change": 0, "cost_impact": 0},
+            "mild_recession": {"usage_change": -0.20},
+            "severe_recession": {"usage_change": -0.40},
+            "rapid_growth": {"usage_change": 0.50},
+            "technology_shift": {"usage_change": -0.30},
         }
         for name, scenario in scenarios.items():
-            if name == 'baseline':
+            if name == "baseline":
                 continue
-            new_cost = base_cost * (1 + scenario['usage_change'])
+            new_cost = base_cost * (1 + scenario["usage_change"])
             underutilization_cost = max(0, commitment_level - new_cost)
-            overage_cost = max(0, new_cost - base_cost) * 0.3 # Overage premium
-            scenarios[name]['cost_impact'] = underutilization_cost + overage_cost
+            overage_cost = max(0, new_cost - base_cost) * 0.3  # Overage premium
+            scenarios[name]["cost_impact"] = underutilization_cost + overage_cost
 
-        weights = {'baseline': 0.4, 'mild_recession': 0.25, 'severe_recession': 0.1,
-                  'rapid_growth': 0.15, 'technology_shift': 0.1}
+        weights = {
+            "baseline": 0.4,
+            "mild_recession": 0.25,
+            "severe_recession": 0.1,
+            "rapid_growth": 0.15,
+            "technology_shift": 0.1,
+        }
 
-        weighted_impact = sum(scenarios[s]['cost_impact'] * weights[s] for s in scenarios)
+        weighted_impact = sum(
+            scenarios[s]["cost_impact"] * weights[s] for s in scenarios
+        )
 
         return {
-            'scenarios': scenarios,
-            'weighted_risk_impact': weighted_impact,
-            'worst_case_impact': max(s['cost_impact'] for s in scenarios.values()),
-            'risk_adjusted_commitment': commitment_level * (1 - weighted_impact/base_cost) if base_cost > 0 else commitment_level
+            "scenarios": scenarios,
+            "weighted_risk_impact": weighted_impact,
+            "worst_case_impact": max(s["cost_impact"] for s in scenarios.values()),
+            "risk_adjusted_commitment": commitment_level
+            * (1 - weighted_impact / base_cost)
+            if base_cost > 0
+            else commitment_level,
         }
 
 
@@ -409,7 +462,7 @@ def enhance_with_advanced_analytics(
     modeler = CloudEconomicsModeler()
     risk_analyzer = QuantitativeRiskAnalyzer()
 
-    spend_dist = analysis_results.get('machine_spend_distribution', {})
+    spend_dist = analysis_results.get("machine_spend_distribution", {})
     total_spend = sum(spend_dist.values())
 
     if billing_data is None or billing_data.empty:
@@ -417,44 +470,56 @@ def enhance_with_advanced_analytics(
         std_dev = total_spend * 0.1 if total_spend > 0 else 1
         historical_usage = pd.Series(np.random.normal(total_spend, std_dev, 36))
     else:
-        historical_usage = billing_data.groupby(pd.Grouper(freq='M'))['Cost'].sum()
+        historical_usage = billing_data.groupby(pd.Grouper(freq="ME"))["Cost"].sum()
 
-    portfolio = optimizer.calculate_optimal_portfolio(
-        spend_dist,
-        pd.DataFrame({k: [v] * 12 for k, v in spend_dist.items()})
-    ) if len(spend_dist) > 1 else {'optimal_allocation': {}, 'sharpe_ratio': 0}
+    portfolio = (
+        optimizer.calculate_optimal_portfolio(
+            spend_dist, pd.DataFrame({k: [v] * 12 for k, v in spend_dist.items()})
+        )
+        if len(spend_dist) > 1
+        else {"optimal_allocation": {}, "sharpe_ratio": 0}
+    )
 
     var_cvar = optimizer.calculate_var_cvar(historical_usage.values)
-    monte_carlo = optimizer.monte_carlo_simulation(initial_cost=total_spend, drift=0.05, volatility=0.2)
+    monte_carlo = optimizer.monte_carlo_simulation(
+        initial_cost=total_spend, drift=0.05, volatility=0.2
+    )
     forecast = modeler.forecast_demand(historical_usage)
-    commitment_ladder = modeler.calculate_optimal_commitment_ladder(forecast) if forecast.get('forecast') is not None else {}
+    commitment_ladder = (
+        modeler.calculate_optimal_commitment_ladder(forecast)
+        if forecast.get("forecast") is not None
+        else {}
+    )
     bs_valuation = optimizer.black_scholes_cud_valuation(
-        spot_price=total_spend, strike_price=total_spend * 0.7,
-        time_to_maturity=3, volatility=0.2, discount_rate=0.03)
+        spot_price=total_spend,
+        strike_price=total_spend * 0.7,
+        time_to_maturity=3,
+        volatility=0.2,
+        discount_rate=0.03,
+    )
 
-    cash_flows = [analysis_results['total_savings_summary']['optimal_mix']] * 36
+    cash_flows = [analysis_results["total_savings_summary"]["optimal_mix"]] * 36
     financial_metrics = optimizer.calculate_financial_metrics(
-        initial_investment=total_spend * 0.7,
-        cash_flows=cash_flows
+        initial_investment=total_spend * 0.7, cash_flows=cash_flows
     )
 
     risk_score = risk_analyzer.calculate_commitment_risk_score(
         commitment_amount=total_spend * 0.7,
         historical_usage=historical_usage,
-        commitment_period=36
+        commitment_period=36,
     )
     stress_test = risk_analyzer.stress_test_scenarios(
         base_cost=total_spend, commitment_level=total_spend * 0.7
     )
 
     enhanced_analysis = analysis_results.copy()
-    enhanced_analysis['advanced_analytics'] = {
-        'portfolio_optimization': portfolio,
-        'risk_metrics': {**var_cvar, **risk_score},
-        'monte_carlo_projection': monte_carlo,
-        'commitment_ladder': commitment_ladder,
-        'financial_metrics': financial_metrics.__dict__,
-        'option_valuation': bs_valuation,
-        'stress_test_results': stress_test,
+    enhanced_analysis["advanced_analytics"] = {
+        "portfolio_optimization": portfolio,
+        "risk_metrics": {**var_cvar, **risk_score},
+        "monte_carlo_projection": monte_carlo,
+        "commitment_ladder": commitment_ladder,
+        "financial_metrics": financial_metrics.__dict__,
+        "option_valuation": bs_valuation,
+        "stress_test_results": stress_test,
     }
     return enhanced_analysis

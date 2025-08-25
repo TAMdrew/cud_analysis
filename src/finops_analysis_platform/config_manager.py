@@ -24,7 +24,7 @@ class ConfigManager:
     """
 
     def __init__(
-        self, config_path: str = 'config.yaml', env_path: Optional[str] = '.env'
+        self, config_path: str = "config.yaml", env_path: Optional[str] = ".env"
     ):
         """
         Initialize the ConfigManager.
@@ -48,21 +48,19 @@ class ConfigManager:
             logger.info("Loaded environment variables from %s", self.env_path)
 
         if self.config_path.is_file():
-            with open(self.config_path, 'r', encoding='utf-8') as f:
+            with open(self.config_path, "r", encoding="utf-8") as f:
                 self.config = yaml.safe_load(f)
                 logger.info("Loaded configuration from %s", self.config_path)
         else:
             logger.warning(
                 "Config file not found at %s. Using default/env configs.",
-                self.config_path
+                self.config_path,
             )
             self.config = {}
 
         self._override_with_env_vars(self.config)
 
-    def _override_with_env_vars(
-        self, config_dict: Dict[str, Any], prefix: str = ""
-    ):
+    def _override_with_env_vars(self, config_dict: Dict[str, Any], prefix: str = ""):
         """
         Recursively override configuration with environment variables.
         Example: config {'gcp': {'project_id': 'x'}} looks for env var
@@ -79,7 +77,10 @@ class ConfigManager:
                         original_type = type(value) if value is not None else str
                         if original_type == bool:
                             config_dict[key] = env_value.lower() in (
-                                'true', '1', 't', 'yes'
+                                "true",
+                                "1",
+                                "t",
+                                "yes",
                             )
                         else:
                             config_dict[key] = original_type(env_value)
@@ -107,7 +108,7 @@ class ConfigManager:
         Returns:
             The configuration value.
         """
-        keys = key.split('.')
+        keys = key.split(".")
         value = self.config
         for k in keys:
             if isinstance(value, dict) and k in value:

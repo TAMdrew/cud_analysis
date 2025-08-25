@@ -10,7 +10,9 @@ import pandas as pd
 from ydata_profiling import ProfileReport
 
 
-def create_profile_report(df: pd.DataFrame, title: str, output_dir: str = 'profiling_reports'):
+def create_profile_report(
+    df: pd.DataFrame, title: str, output_dir: str = "profiling_reports"
+):
     """
     Generates a data profiling report for a given DataFrame and saves it as an HTML file.
 
