@@ -6,15 +6,16 @@ Author: andrewanolasco@
 Version: V1.0.0
 """
 
-import numpy as np
-import pandas as pd
-from scipy import optimize, stats
-from scipy.stats import norm, lognorm
-from typing import Dict, List, Tuple, Optional, Union
 import warnings
 from dataclasses import dataclass
 from enum import Enum
+from typing import Dict, List, Optional
+
+import numpy as np
 import numpy_financial as npf
+import pandas as pd
+from scipy import optimize, stats
+from scipy.stats import norm
 
 warnings.filterwarnings('ignore')
 
@@ -143,18 +144,18 @@ class AdvancedCUDOptimizer:
         CUD can be viewed as a call option on compute resources
         """
         d1 = (np.log(spot_price/strike_price) +
-              (self.risk_free_rate + 0.5*volatility**2)*time_to_maturity) / \
+              (discount_rate + 0.5*volatility**2)*time_to_maturity) / \
              (volatility * np.sqrt(time_to_maturity))
         d2 = d1 - volatility * np.sqrt(time_to_maturity)
 
         call_value = (spot_price * norm.cdf(d1) -
-                     strike_price * np.exp(-self.risk_free_rate * time_to_maturity) * norm.cdf(d2))
+                     strike_price * np.exp(-discount_rate * time_to_maturity) * norm.cdf(d2))
 
         # Greeks for risk management
         delta = norm.cdf(d1)
         gamma = norm.pdf(d1) / (spot_price * volatility * np.sqrt(time_to_maturity))
         theta = (-(spot_price * norm.pdf(d1) * volatility) / (2 * np.sqrt(time_to_maturity)) -
-                self.risk_free_rate * strike_price * np.exp(-self.risk_free_rate * time_to_maturity) * norm.cdf(d2))
+                discount_rate * strike_price * np.exp(-discount_rate * time_to_maturity) * norm.cdf(d2))
         vega = spot_price * norm.pdf(d1) * np.sqrt(time_to_maturity)
         rho = strike_price * time_to_maturity * np.exp(-self.risk_free_rate * time_to_maturity) * norm.cdf(d2)
 
@@ -233,7 +234,7 @@ class AdvancedCUDOptimizer:
         # IRR calculation
         try:
             irr = npf.irr([-initial_investment] + cash_flows)
-        except:
+        except Exception:  # Catching generic exception for robustness
             irr = 0
 
         # Payback period
@@ -415,6 +416,7 @@ class QuantitativeRiskAnalyzer:
         """
         Calculate comprehensive risk score for CUD commitment
         """
+        del commitment_period  # Unused in this risk model version
         # Calculate usage statistics
         mean_usage = historical_usage.mean()
         std_usage = historical_usage.std()

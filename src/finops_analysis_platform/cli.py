@@ -1,17 +1,27 @@
+"""Command-Line Interface for the FinOps CUD Analysis Platform.
+
+This module provides a CLI for running CUD analysis, generating reports,
+and profiling datasets directly from the command line.
+"""
+
 import click
+
 from .config_manager import ConfigManager
-from .data_loader import GCSDataLoader
 from .core import CUDAnalyzer
-from .reporting import create_dashboard, PDFReportGenerator
+from .data_loader import GCSDataLoader
 from .profiler import create_profile_report
+from .reporting import PDFReportGenerator, create_dashboard
+
 
 @click.group()
 def main():
     """A CLI for the FinOps CUD Analysis Platform."""
-    pass
+
 
 @main.command()
-@click.option('--config', default='config.yaml', help='Path to the configuration file.')
+@click.option(
+    '--config', default='config.yaml', help='Path to the configuration file.'
+)
 def run(config):
     """Run the CUD analysis."""
     click.echo("🚀 Starting FinOps CUD Analysis...")
@@ -38,21 +48,32 @@ def run(config):
         click.echo(f"📄 PDF report generated: {report_filename}")
 
         # Upload to GCS if available
-        if loader.storage_client:
-            if loader.save_report_to_gcs(report_filename, report_filename):
-                click.echo(f"☁️ Report uploaded to GCS: gs://{loader.bucket_name}/reports/cfo_dashboard/{report_filename}")
+        if loader.storage_client and loader.save_report_to_gcs(
+            report_filename, report_filename
+        ):
+            click.echo(
+                f"☁️ Report uploaded to GCS: gs://{loader.bucket_name}/"
+                f"reports/cfo_dashboard/{report_filename}"
+            )
 
     # Create dashboard
     if config_manager.get('reporting', {}).get('create_dashboard', False):
-        create_dashboard(analysis)
+        create_dashboard(analysis, config_manager=config_manager)
         click.echo("📊 Dashboard created.")
 
     click.echo("🎉 FinOps CUD Analysis finished successfully!")
 
 
 @main.command()
-@click.option('--config', default='config.yaml', help='Path to the configuration file.')
-@click.option('--dataset', type=click.Choice(['billing', 'recommendations', 'manual_analysis']), required=True, help='The dataset to profile.')
+@click.option(
+    '--config', default='config.yaml', help='Path to the configuration file.'
+)
+@click.option(
+    '--dataset',
+    type=click.Choice(['billing', 'recommendations', 'manual_analysis']),
+    required=True,
+    help='The dataset to profile.',
+)
 def profile(config, dataset):
     """Generate a data profiling report for a specific dataset."""
     click.echo(f"🚀 Starting data profiling for the '{dataset}' dataset...")
@@ -68,9 +89,12 @@ def profile(config, dataset):
 
     if dataset in data:
         df = data[dataset]
-        create_profile_report(df, title=f"{dataset.replace('_', ' ').title()} Dataset")
+        create_profile_report(
+            df, title=f"{dataset.replace('_', ' ').title()} Dataset"
+        )
     else:
         click.echo(f"⚠️ Dataset '{dataset}' not found.")
+
 
 if __name__ == '__main__':
     main()

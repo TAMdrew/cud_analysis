@@ -46,6 +46,7 @@ notebooks/*_CUD_Analysis_Platform.ipynb
 build/
 dist/
 *.egg-info
+profiling_reports/
 
 # Pytest cache
 .pytest_cache/
