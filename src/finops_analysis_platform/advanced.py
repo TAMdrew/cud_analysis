@@ -151,7 +151,7 @@ class AdvancedCUDOptimizer:
         delta = norm.cdf(d1)
         gamma = norm.pdf(d1) / (spot_price * volatility * np.sqrt(time_to_maturity))
         theta = (-(spot_price * norm.pdf(d1) * volatility) / (2 * np.sqrt(time_to_maturity)) -
-                discount_rate * strike_price * np.exp(-discount_rate * time_to_maturity) * norm.cdf(d2))
+                 discount_rate * strike_price * np.exp(-discount_rate * time_to_maturity) * norm.cdf(d2))
         vega = spot_price * norm.pdf(d1) * np.sqrt(time_to_maturity)
         rho = strike_price * time_to_maturity * np.exp(-self.risk_free_rate * time_to_maturity) * norm.cdf(d2)
 
@@ -277,8 +277,8 @@ class CloudEconomicsModeler:
         }
 
     def calculate_optimal_commitment_ladder(self,
-                                           forecast: Dict,
-                                           risk_tolerance: float = 0.5) -> Dict:
+                                            forecast: Dict,
+                                            risk_tolerance: float = 0.5) -> Dict:
         """Designs an optimal CUD commitment ladder strategy."""
         if 'forecast' not in forecast or forecast['forecast'] is None:
             return {}  # Cannot proceed without a forecast
@@ -388,7 +388,7 @@ class QuantitativeRiskAnalyzer:
             scenarios[name]['cost_impact'] = underutilization_cost + overage_cost
 
         weights = {'baseline': 0.4, 'mild_recession': 0.25, 'severe_recession': 0.1,
-                  'rapid_growth': 0.15, 'technology_shift': 0.1}
+                   'rapid_growth': 0.15, 'technology_shift': 0.1}
 
         weighted_impact = sum(scenarios[s]['cost_impact'] * weights[s] for s in scenarios)
 
