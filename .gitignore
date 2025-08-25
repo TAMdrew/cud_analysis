@@ -34,6 +34,7 @@ finops_venv/
 # Jupyter Notebook
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
+notebooks/*_CUD_Analysis_Platform.ipynb
 
 # IDE
 .vscode/
