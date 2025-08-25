@@ -151,7 +151,7 @@ class AdvancedCUDOptimizer:
         delta = norm.cdf(d1)
         gamma = norm.pdf(d1) / (spot_price * volatility * np.sqrt(time_to_maturity))
         theta = (-(spot_price * norm.pdf(d1) * volatility) / (2 * np.sqrt(time_to_maturity)) -
-                 discount_rate * strike_price * np.exp(-discount_rate * time_to_maturity) * norm.cdf(d2))
+                discount_rate * strike_price * np.exp(-discount_rate * time_to_maturity) * norm.cdf(d2))
         vega = spot_price * norm.pdf(d1) * np.sqrt(time_to_maturity)
         rho = strike_price * time_to_maturity * np.exp(-self.risk_free_rate * time_to_maturity) * norm.cdf(d2)
 
@@ -277,18 +277,18 @@ class CloudEconomicsModeler:
         }
 
     def calculate_optimal_commitment_ladder(self,
-                                            forecast: Dict,
-                                            risk_tolerance: float = 0.5) -> Dict:
+                                           forecast: Dict,
+                                           risk_tolerance: float = 0.5) -> Dict:
         """Designs an optimal CUD commitment ladder strategy."""
         if 'forecast' not in forecast or forecast['forecast'] is None:
-            return {}  # Cannot proceed without a forecast
+            return {}
 
         base_demand = forecast['forecast'].mean()
 
         if 'lower_95' in forecast and forecast['lower_95'] is not None:
             high_confidence_level = forecast['lower_95'].mean()
         else:
-            std_dev = forecast['forecast'].std()
+            std_dev = forecast['forecast'].std() if forecast['forecast'].std() > 0 else base_demand * 0.1
             high_confidence_level = base_demand - 1.96 * std_dev
 
         if risk_tolerance < 0.3:  # Conservative
@@ -388,7 +388,7 @@ class QuantitativeRiskAnalyzer:
             scenarios[name]['cost_impact'] = underutilization_cost + overage_cost
 
         weights = {'baseline': 0.4, 'mild_recession': 0.25, 'severe_recession': 0.1,
-                   'rapid_growth': 0.15, 'technology_shift': 0.1}
+                  'rapid_growth': 0.15, 'technology_shift': 0.1}
 
         weighted_impact = sum(scenarios[s]['cost_impact'] * weights[s] for s in scenarios)
 
