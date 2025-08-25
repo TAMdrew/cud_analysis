@@ -41,10 +41,18 @@ NOTEBOOK_TEMPLATE="notebooks/CUD_Analysis_Walkthrough.ipynb"
 DATED_NOTEBOOK="notebooks/$(date +%Y-%m)_CUD_Analysis_Platform.ipynb"
 
 if [ -f "$NOTEBOOK_TEMPLATE" ]; then
+    # Copy the template to the new dated notebook file
     cp "$NOTEBOOK_TEMPLATE" "$DATED_NOTEBOOK"
-    echo "✅ Created a new notebook for this month's analysis: ${DATED_NOTEBOOK}"
+
+    # Verify that the file was created successfully
+    if [ -f "$DATED_NOTEBOOK" ]; then
+        echo "✅ Created a new notebook for this month's analysis: ${DATED_NOTEBOOK}"
+    else
+        echo "❌ ERROR: Failed to create new notebook at ${DATED_NOTEBOOK}." >&2
+        exit 1
+    fi
 else
-    echo "⚠️  Warning: Notebook template not found at ${NOTEBOOK_TEMPLATE}"
+    echo "⚠️  Warning: Notebook template not found at ${NOTEBOOK_TEMPLATE}" >&2
 fi
 
 echo "✅ Setup complete! You can now run the notebook."

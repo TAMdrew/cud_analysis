@@ -173,47 +173,82 @@ class GCSDataLoader:
         self._log_summary(data_frames)
         return data_frames
 
-    def _load_data_from_gcs(self) -> Dict[str, pd.DataFrame]:
-        """Iterates through GCS structure and loads data from blobs."""
-        data_frames: Dict[str, pd.DataFrame] = {}
+    def load_single_dataset(self, data_type: str) -> pd.DataFrame | None:
+        """
+        Loads a single dataset from the GCS bucket.
+        If GCS access fails, it falls back to generating a sample dataset.
+        """
+        if data_type not in self.GCS_STRUCTURE:
+            logger.error("Unknown data type requested: %s", data_type)
+            return None
+
+        if not self.storage_client:
+            logger.info("GCS client not available. Generating single sample dataset.")
+            return self._generate_single_sample_data(data_type)
+
+        logger.info(
+            "Starting single data load for '%s' from GCS bucket: gs://%s",
+            data_type,
+            self.bucket_name,
+        )
+
+        folder_path = self.GCS_STRUCTURE[data_type]
+        df = self._load_dataset_from_gcs_folder(folder_path)
+
+        if df is None:
+            logger.warning(
+                "No data loaded from GCS for '%s'. Falling back to sample data.",
+                data_type,
+            )
+            return self._generate_single_sample_data(data_type)
+
+        self._log_summary({data_type: df})
+        return df
+
+    def _load_dataset_from_gcs_folder(
+        self, folder_path: str
+    ) -> pd.DataFrame | None:
+        """Loads and combines all CSVs from a specific GCS folder."""
         try:
             bucket = self.storage_client.bucket(self.bucket_name)
-            for data_type, folder_path in self.GCS_STRUCTURE.items():
-                logger.info(
-                    "Loading '%s' data from gs://%s/%s",
-                    data_type,
-                    self.bucket_name,
-                    folder_path,
-                )
-                blobs = list(bucket.list_blobs(prefix=folder_path))
-                if not blobs:
-                    logger.info("No files found in %s.", folder_path)
-                    continue
+            blobs = list(bucket.list_blobs(prefix=folder_path))
+            if not blobs:
+                logger.info("No files found in %s.", folder_path)
+                return None
 
-                df_list = [
-                    self._process_blob(blob)
-                    for blob in blobs
-                    if blob.name.endswith(".csv")
-                ]
-
-                # Filter out None values before concatenating
-                valid_dfs = [df for df in df_list if df is not None]
-                if valid_dfs:
-                    data_frames[data_type] = pd.concat(valid_dfs, ignore_index=True)
-                    logger.info(
-                        "Successfully loaded and combined %d files for '%s'.",
-                        len(valid_dfs),
-                        data_type,
-                    )
+            df_list = [
+                self._process_blob(blob) for blob in blobs if blob.name.endswith(".csv")
+            ]
+            valid_dfs = [df for df in df_list if df is not None]
+            if valid_dfs:
+                return pd.concat(valid_dfs, ignore_index=True)
+            return None
         # pylint: disable=broad-exception-caught
-        # A broad exception is caught here because many things can fail
-        # (network, permissions) and the goal is to fallback gracefully.
         except Exception as e:
             logger.error(
-                "Failed to access GCS bucket 'gs://%s': %s", self.bucket_name, e
+                "Failed to access GCS path 'gs://%s/%s': %s",
+                self.bucket_name,
+                folder_path,
+                e,
             )
-            return {}
+            return None
 
+    def _load_data_from_gcs(self) -> Dict[str, pd.DataFrame]:
+        """Iterates through GCS structure and loads data from all folders."""
+        data_frames: Dict[str, pd.DataFrame] = {}
+        for data_type, folder_path in self.GCS_STRUCTURE.items():
+            logger.info(
+                "Loading '%s' data from gs://%s/%s",
+                data_type,
+                self.bucket_name,
+                folder_path,
+            )
+            df = self._load_dataset_from_gcs_folder(folder_path)
+            if df is not None:
+                data_frames[data_type] = df
+                logger.info(
+                    "Successfully loaded and combined files for '%s'.", data_type
+                )
         return data_frames
 
     def _process_blob(self, blob: storage.Blob) -> pd.DataFrame | None:
@@ -229,6 +264,17 @@ class GCSDataLoader:
         except Exception as e:
             logger.warning("Could not load or parse blob %s: %s", blob.name, e)
             return None
+
+    def _generate_single_sample_data(self, data_type: str) -> pd.DataFrame | None:
+        """Generates a single sample DataFrame based on the data type."""
+        logger.info("Generating sample data for '%s'.", data_type)
+        if data_type == "billing":
+            return generate_sample_billing_data()
+        if data_type == "recommendations":
+            return generate_sample_recommendations_data()
+        if data_type == "manual_analysis":
+            return generate_sample_manual_analysis_data()
+        return None
 
     def _generate_sample_data(self) -> Dict[str, pd.DataFrame | bool]:
         """Generates a dictionary of sample data for demonstration."""
