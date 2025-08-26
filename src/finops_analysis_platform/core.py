@@ -297,7 +297,9 @@ class CUDAnalyzer:
         layers = []
         for machine_type, savings in savings_by_machine.items():
             options = savings["savings_options"]
-            best_option = max(options, key=lambda k: options[k]["monthly_savings"])
+            best_option = max(
+                options, key=lambda k, opt=options: opt[k]["monthly_savings"]
+            )
             if options[best_option]["monthly_savings"] > 0:
                 layers.append(
                     {

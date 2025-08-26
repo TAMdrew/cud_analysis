@@ -137,6 +137,7 @@ class AdvancedCUDOptimizer:
         spot_price: float,
         strike_price: float,
         time_to_maturity: float,
+        *,
         volatility: float,
         discount_rate: float,
     ) -> Dict[str, Any]:
@@ -188,6 +189,7 @@ class AdvancedCUDOptimizer:
         initial_cost: float,
         drift: float,
         volatility: float,
+        *,
         time_periods: int = 36,
         n_simulations: int = 10000,
     ) -> Dict[str, Any]:
@@ -428,7 +430,7 @@ class QuantitativeRiskAnalyzer:
             new_cost = base_cost * (1 + scenario["usage_change"])
             underutilization_cost = max(0, commitment_level - new_cost)
             overage_cost = max(0, new_cost - base_cost) * 0.3  # Overage premium
-            scenarios[name]["cost_impact"] = underutilization_cost + overage_cost
+            scenario["cost_impact"] = underutilization_cost + overage_cost
 
         weights = {
             "baseline": 0.4,
@@ -439,7 +441,8 @@ class QuantitativeRiskAnalyzer:
         }
 
         weighted_impact = sum(
-            scenarios[s]["cost_impact"] * weights[s] for s in scenarios
+            scenario["cost_impact"] * weights[name]
+            for name, scenario in scenarios.items()
         )
 
         return {
