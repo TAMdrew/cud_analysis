@@ -52,13 +52,27 @@ class ConfigManager:
                 self.config = yaml.safe_load(f)
                 logger.info("Loaded configuration from %s", self.config_path)
         else:
-            logger.warning(
-                "Config file not found at %s. Using default/env configs.",
-                self.config_path,
-            )
-            self.config = {}
+            if self.config_path != Path("config.yaml"):  # Only warn if non-default path
+                logger.error(
+                    "Config file not found at specified path: %s",
+                    self.config_path,
+                )
+                raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
+            else:
+                logger.info(
+                    "Default config file not found. Using environment variables only."
+                )
+                self.config = self._get_default_config()
 
         self._override_with_env_vars(self.config)
+
+    def _get_default_config(self) -> Dict[str, Any]:
+        """Returns minimal default configuration."""
+        return {
+            "gcp": {"location": "us-central1"},
+            "analysis": {"risk_tolerance": "medium"},
+            "cud_strategy": {"base_layer_coverage": 40}
+        }
 
     def _override_with_env_vars(self, config_dict: Dict[str, Any], prefix: str = ""):
         """

@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import io
 import logging
+import os
 import random
+from pathlib import Path
 from typing import Dict, Union
 
 import google.auth
@@ -37,6 +39,25 @@ def _generate_realistic_cost(usage: float, sku: str) -> float:
     sku_family = sku.split("-")[0]
     cost_multiplier = base_cost_per_hour.get(sku_family, 0.1)
     return usage * cost_multiplier * (1 + random.uniform(-0.1, 0.1))
+
+
+def _generate_realistic_cost_vectorized(usage_series: pd.Series, sku_series: pd.Series) -> pd.Series:
+    """Vectorized cost generation for better performance."""
+    base_costs = {
+        "n2": 0.1, "e2": 0.05, "c2": 0.15, "m1": 0.5,
+        "t2": 0.08, "a2": 1.2, "gpu": 2.5
+    }
+
+    # Extract SKU families
+    sku_families = sku_series.str.split("-").str[0]
+
+    # Map to cost multipliers
+    cost_multipliers = sku_families.map(base_costs).fillna(0.1)
+
+    # Generate random variations
+    random_factors = 1 + np.random.uniform(-0.1, 0.1, len(usage_series))
+
+    return usage_series * cost_multipliers * random_factors
 
 
 def generate_sample_billing_data(rows: int = 1000) -> pd.DataFrame:
@@ -67,9 +88,7 @@ def generate_sample_billing_data(rows: int = 1000) -> pd.DataFrame:
     df["End Time"] = df["Start Time"] + pd.to_timedelta(
         np.random.randint(1, 24, rows), "h"
     )
-    df["Cost"] = df.apply(
-        lambda row: _generate_realistic_cost(row["Usage"], row["SKU"]), axis=1
-    )
+    df["Cost"] = _generate_realistic_cost_vectorized(df["Usage"], df["SKU"])
     return df
 
 
@@ -145,10 +164,9 @@ class GCSDataLoader:
             return storage.Client(credentials=credentials, project=project)
         except DefaultCredentialsError:
             logger.warning(
-                "Google Cloud authentication failed. "
-                "Could not find default credentials."
+                "Google Cloud authentication failed. Could not find default credentials. "
+                "Proceeding with sample data generation as fallback."
             )
-            logger.info("Proceeding with sample data generation.")
             return None
         # pylint: disable=broad-exception-caught
         # A broad exception is caught here to handle any unexpected errors
@@ -264,22 +282,22 @@ class GCSDataLoader:
         if not self.storage_client:
             logger.warning("GCS client not available. Report saved locally only.")
             return False
+
+        # Sanitize filename to prevent path traversal
+        safe_filename = os.path.basename(filename)
+        if safe_filename != filename:
+            logger.warning("Invalid filename detected: %s", filename)
+            return False
+
         try:
-            # Hardcoded for now, could be in config
-            reports_path = "reports/cfo_dashboard/"
+            reports_path = "reports/cfo_dashboard"
+            # Use Path for safe path joining
+            blob_path = str(Path(reports_path) / safe_filename)
             bucket = self.storage_client.bucket(self.bucket_name)
-            blob = bucket.blob(f"{reports_path}{filename}")
+            blob = bucket.blob(blob_path)
             blob.upload_from_filename(local_path)
-            logger.info(
-                "Report uploaded to gs://%s/%s%s",
-                self.bucket_name,
-                reports_path,
-                filename,
-            )
+            logger.info("Report uploaded to gs://%s/%s", self.bucket_name, blob_path)
             return True
-        # pylint: disable=broad-exception-caught
-        # A broad exception is caught here to handle any potential network
-        # or permission errors during the GCS upload.
         except Exception as e:
             logger.error("Could not upload report to GCS: %s", e)
             return False
