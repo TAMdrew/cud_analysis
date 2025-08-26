@@ -41,7 +41,9 @@ def _generate_realistic_cost(usage: float, sku: str) -> float:
     return usage * cost_multiplier * (1 + random.uniform(-0.1, 0.1))
 
 
-def _generate_realistic_cost_vectorized(usage_series: pd.Series, sku_series: pd.Series) -> pd.Series:
+def _generate_realistic_cost_vectorized(
+    usage_series: pd.Series, sku_series: pd.Series
+) -> pd.Series:
     """Vectorized cost generation for better performance."""
     base_costs = {
         "n2": 0.1, "e2": 0.05, "c2": 0.15, "m1": 0.5,
@@ -298,7 +300,7 @@ class GCSDataLoader:
             blob.upload_from_filename(local_path)
             logger.info("Report uploaded to gs://%s/%s", self.bucket_name, blob_path)
             return True
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Could not upload report to GCS: %s", e)
             return False
 

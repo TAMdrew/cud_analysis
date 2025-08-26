@@ -58,11 +58,11 @@ class ConfigManager:
                     self.config_path,
                 )
                 raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-            else:
-                logger.info(
-                    "Default config file not found. Using environment variables only."
-                )
-                self.config = self._get_default_config()
+
+            logger.info(
+                "Default config file not found. Using environment variables only."
+            )
+            self.config = self._get_default_config()
 
         self._override_with_env_vars(self.config)
 

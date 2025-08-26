@@ -1,6 +1,7 @@
 """Core analysis engine for the FinOps CUD Analysis Platform."""
 import json
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -118,7 +119,6 @@ class CUDAnalyzer:
 
     def _is_valid_project_id(self, project_id: str) -> bool:
         """Validates GCP project ID format."""
-        import re
         # GCP project IDs must be 6-30 characters, lowercase letters, digits, hyphens
         pattern = r'^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
         return bool(re.match(pattern, project_id))
