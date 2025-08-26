@@ -85,7 +85,7 @@ def generate_content(
     tools: Optional[List[types.Tool]] = None,
     model_id: Optional[str] = None,
     cached_content_name: Optional[str] = None,
-):
+) -> Optional[types.GenerateContentResponse]:
     """
     Generates content using the Gemini API with enhanced features.
 

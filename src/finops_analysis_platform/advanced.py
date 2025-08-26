@@ -55,25 +55,40 @@ class AdvancedCUDOptimizer:
         self.risk_free_rate = risk_free_rate
         self.volatility_estimates: Dict[str, float] = {}
 
-    # pylint: disable=too-many-locals
     def calculate_optimal_portfolio(
         self, machine_returns: Dict[str, float], historical_usage: pd.DataFrame
     ) -> Dict[str, Any]:
         """Applies Modern Portfolio Theory to CUD allocation."""
-        returns: Dict[str, float] = {}
+        returns = self._calculate_returns(machine_returns, historical_usage)
+
+        if not returns:
+            return {"optimal_allocation": {}}
+
+        optimal_weights_result = self._optimize_portfolio_weights(returns)
+        optimal_weights = dict(zip(returns.keys(), optimal_weights_result.x))
+        metrics = self._calculate_portfolio_metrics(optimal_weights_result, returns)
+
+        return {
+            "optimal_allocation": optimal_weights,
+            **metrics
+        }
+
+    def _calculate_returns(
+        self, machine_returns: Dict[str, float], historical_usage: pd.DataFrame
+    ) -> Dict[str, float]:
+        """Calculate returns for each machine type."""
+        returns = {}
         for machine_type in machine_returns:
             if machine_type in historical_usage.columns:
                 series = historical_usage[machine_type]
                 log_returns = np.log(series / series.shift(1)).dropna()
                 returns[machine_type] = log_returns.mean() * 252
-                self.volatility_estimates[machine_type] = log_returns.std() * np.sqrt(
-                    252
-                )
+                self.volatility_estimates[machine_type] = log_returns.std() * np.sqrt(252)
+        return returns
 
+    def _optimize_portfolio_weights(self, returns: Dict[str, float]) -> optimize.OptimizeResult:
+        """Optimize portfolio weights using Sharpe ratio maximization."""
         n_assets = len(returns)
-        if n_assets == 0:
-            return {"optimal_allocation": {}}
-
         cov_matrix = np.eye(n_assets) * 0.1
 
         def neg_sharpe(weights, exp_returns, cov, rf_rate):
@@ -93,16 +108,25 @@ class AdvancedCUDOptimizer:
             bounds=bounds,
             constraints=constraints,
         )
+        return result
 
-        optimal_weights = dict(zip(returns.keys(), result.x))
-        portfolio_return = np.sum(result.x * np.array(list(returns.values())))
+    def _calculate_portfolio_metrics(
+        self, weights_result: optimize.OptimizeResult, returns: Dict[str, float]
+    ) -> Dict[str, Any]:
+        """Calculate portfolio performance metrics."""
+        optimal_weights = weights_result.x
+        portfolio_return = np.sum(optimal_weights * np.array(list(returns.values())))
+        sharpe_ratio = -weights_result.fun if weights_result.fun != -np.inf else 0
+        portfolio_volatility = np.sqrt(
+            np.dot(optimal_weights.T, np.dot(np.eye(len(returns)) * 0.1, optimal_weights))
+        )
+        diversification_ratio = 1 / np.sum(optimal_weights**2)
 
         return {
-            "optimal_allocation": optimal_weights,
             "expected_return": portfolio_return,
-            "sharpe_ratio": -result.fun if result.fun != np.inf else 0,
-            "portfolio_volatility": np.sqrt(result.fun) if result.fun >= 0 else 0,
-            "diversification_ratio": 1 / np.sum(result.x**2),
+            "sharpe_ratio": sharpe_ratio,
+            "portfolio_volatility": portfolio_volatility,
+            "diversification_ratio": diversification_ratio,
         }
 
     def calculate_var_cvar(
@@ -234,8 +258,10 @@ class AdvancedCUDOptimizer:
         npv = npf.npv(discount_rate, [-initial_investment] + cash_flows)
         try:
             irr = npf.irr([-initial_investment] + cash_flows)
-        except Exception:  # pylint: disable=broad-exception-caught
-            irr = 0.0
+        except (ValueError, RuntimeError) as e:
+            # IRR calculation can fail for certain cash flow patterns
+            logger.warning("IRR calculation failed for cash flows: %s", str(e))
+            irr = float('nan')  # Use NaN instead of 0 to indicate calculation failure
 
         cumulative_cf = np.cumsum([-initial_investment] + cash_flows)
         payback_idx = np.where(cumulative_cf > 0)[0]

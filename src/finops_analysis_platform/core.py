@@ -87,6 +87,10 @@ class MachineTypeDiscountMapping:
         )
         return "n2"
 
+    def get_machine_base(self, machine_type: str) -> str:
+        """Public method to get machine base type."""
+        return self._extract_machine_base(machine_type)
+
     def get_family(self, machine_type: str) -> str:
         """Gets the machine family for a given machine type."""
         machine_base = self._extract_machine_base(machine_type)
@@ -98,6 +102,9 @@ class MachineTypeDiscountMapping:
 
 class CUDAnalyzer:
     """Core engine for performing Committed Use Discount (CUD) analysis."""
+    # Discount thresholds for recommendations
+    HIGH_DISCOUNT_THRESHOLD = 0.65
+    MEDIUM_DISCOUNT_THRESHOLD = 0.45
 
     def __init__(
         self, config_manager: ConfigManager, billing_data: Optional[pd.DataFrame] = None
@@ -109,13 +116,20 @@ class CUDAnalyzer:
         self.analysis_results: Dict[str, Any] = {}
         self.gemini_client = self._initialize_gemini_client()
 
+    def _is_valid_project_id(self, project_id: str) -> bool:
+        """Validates GCP project ID format."""
+        import re
+        # GCP project IDs must be 6-30 characters, lowercase letters, digits, hyphens
+        pattern = r'^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+        return bool(re.match(pattern, project_id))
+
     def _initialize_gemini_client(self) -> Optional[Any]:
         """Initializes the Gemini client if configured."""
         project_id = self.config_manager.get("gcp.project_id")
         location = self.config_manager.get("gcp.location", "us-central1")
-        if project_id and project_id != "your-project-id":
+        if project_id and self._is_valid_project_id(project_id):
             return initialize_gemini(project_id=project_id, location=location)
-        logger.warning("Gemini client not initialized due to missing project_id.")
+        logger.warning("Gemini client not initialized due to missing or invalid project_id.")
         return None
 
     def _validate_billing_data(
@@ -233,15 +247,11 @@ class CUDAnalyzer:
         sku_col = "SKU" if "SKU" in self.billing_data.columns else "Sku Description"
         df = self.billing_data.copy()
         df["Cost"] = pd.to_numeric(df["Cost"], errors="coerce")
-        grouped = df.groupby(sku_col)["Cost"].sum()
 
-        distribution: Dict[str, float] = {}
-        for machine_type, cost in grouped.items():
-            # pylint: disable=protected-access
-            # Accessing for internal calculation efficiency is acceptable here.
-            base_type = self.discount_mapping._extract_machine_base(str(machine_type))
-            distribution.setdefault(base_type, 0)
-            distribution[base_type] += cost
+        # Vectorized operation for better performance
+        df["base_type"] = df[sku_col].apply(self.discount_mapping.get_machine_base)
+        distribution = df.groupby("base_type")["Cost"].sum().to_dict()
+
         return distribution
 
     def _calculate_savings_by_machine(
@@ -282,9 +292,9 @@ class CUDAnalyzer:
 
     def _get_recommendation(self, discounts: Dict[str, float]) -> str:
         """Gets a CUD recommendation based on available discount rates."""
-        if discounts.get("3yr_resource", 0) >= 0.65:
+        if discounts.get("3yr_resource", 0) >= self.HIGH_DISCOUNT_THRESHOLD:
             return "3-Year Resource CUD (Highest Savings)"
-        if discounts.get("1yr_resource", 0) >= 0.45:
+        if discounts.get("1yr_resource", 0) >= self.MEDIUM_DISCOUNT_THRESHOLD:
             return "1-Year Resource CUD (Good Savings, Less Commitment)"
         if discounts.get("3yr_flex", 0) > 0:
             return "3-Year Flex CUD (Good Flexibility)"
