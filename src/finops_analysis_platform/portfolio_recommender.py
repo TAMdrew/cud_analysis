@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional, Protocol, cast
+from typing import Any, Dict, Protocol, cast
 
 from .config_manager import ConfigManager
 from .gemini_service import generate_content, initialize_gemini
@@ -63,9 +63,9 @@ class AIPortfolioRecommender(PortfolioRecommender):
 
     def __init__(self, config_manager: ConfigManager):
         self.config_manager = config_manager
-        self.gemini_client = self._initialize_gemini_client()
+        self.gemini_initialized = self._initialize_gemini()
 
-    def _initialize_gemini_client(self) -> Optional[Any]:
+    def _initialize_gemini(self) -> bool:
         """Initializes the Gemini client if configured."""
         project_id = self.config_manager.get("gcp.project_id")
         location = self.config_manager.get("gcp.location", "us-central1")
@@ -74,7 +74,7 @@ class AIPortfolioRecommender(PortfolioRecommender):
         logger.warning(
             "Gemini client not initialized due to missing or invalid project_id."
         )
-        return None
+        return False
 
     def _is_valid_project_id(self, project_id: str) -> bool:
         """Validates GCP project ID format."""
@@ -84,7 +84,7 @@ class AIPortfolioRecommender(PortfolioRecommender):
 
     def recommend_portfolio(self, savings_by_machine: Dict) -> Dict[str, Any]:
         """Generates a CUD portfolio optimization using the Gemini AI."""
-        if not self.gemini_client:
+        if not self.gemini_initialized:
             logger.warning(
                 "Cannot generate AI portfolio optimization without Gemini client."
             )
@@ -108,7 +108,7 @@ class AIPortfolioRecommender(PortfolioRecommender):
         logger.info(
             "Generating AI CUD portfolio for risk tolerance: %s", risk_tolerance
         )
-        response = generate_content(self.gemini_client, prompt)
+        response = generate_content(prompt)
 
         if not (response and response.text):
             return {"error": "No response from AI for portfolio optimization."}

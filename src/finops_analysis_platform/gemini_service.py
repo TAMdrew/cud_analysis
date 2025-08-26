@@ -1,34 +1,42 @@
 """Provides a service layer for interacting with the Google Gemini API.
 
 This module includes functions for client initialization, model selection,
-content generation, and managing cached content for performance optimization.
-It is designed to work with the google-genai SDK for Vertex AI.
+and content generation. It is designed to work with the google-generativeai
+SDK configured for use with Vertex AI.
 """
 
 import logging
 from typing import List, Optional
 
-import pandas as pd
-from google import genai
+import google.generativeai as genai
 from google.api_core import exceptions
-from google.generativeai import GenerativeModel, types
-from google.generativeai.types import GenerationConfig
+from google.generativeai.types import GenerationConfig, Tool
 
 logger = logging.getLogger(__name__)
 
 # --- Model Constants ---
-COMPLEX_MODEL = "gemini-2.5-pro"
-SIMPLE_MODEL = "gemini-2.5-flash"
+COMPLEX_MODEL = "gemini-1.5-pro-preview-0409"
+SIMPLE_MODEL = "gemini-1.5-flash-preview-0514"
 # A simple heuristic for model selection
 COMPLEX_PROMPT_THRESHOLD = 1500  # characters
 
 
-def initialize_gemini(project_id: str, location: str) -> Optional[genai.Client]:
-    """Initializes and returns a Gemini client configured for Vertex AI."""
+def initialize_gemini(project_id: str, location: str) -> bool:
+    """Initializes the Gemini client by configuring the SDK for Vertex AI."""
     if not project_id:
         logger.warning("Gemini client not initialized due to missing project_id.")
-        return None
-    return genai.Client(vertexai=True, project=project_id, location=location)
+        return False
+    try:
+        genai.configure(transport="vertex_ai", project=project_id, location=location)
+        logger.info(
+            "Gemini SDK configured for Vertex AI in project '%s' and location '%s'",
+            project_id,
+            location,
+        )
+        return True
+    except (exceptions.GoogleAPICallError, ValueError, ImportError) as e:
+        logger.error("Failed to configure Gemini SDK for Vertex AI: %s", e)
+        return False
 
 
 def _get_model_for_prompt(prompt: str) -> str:
@@ -46,56 +54,18 @@ def _get_model_for_prompt(prompt: str) -> str:
     return SIMPLE_MODEL
 
 
-def create_cached_content_from_df(
-    client: genai.Client, model: str, dataframe: pd.DataFrame, ttl_seconds: int = 3600
-) -> Optional[str]:
-    """
-    Creates a cached content resource from a pandas DataFrame.
-
-    Args:
-        client: The initialized Gemini client.
-        model: The model name to associate with the cache.
-        dataframe: The pandas DataFrame to cache.
-        ttl_seconds: The time-to-live for the cache in seconds.
-
-    Returns:
-        The resource name of the created cached content, or None on failure.
-    """
-    try:
-        logger.info(
-            "Creating cached content from DataFrame with TTL %ds...", ttl_seconds
-        )
-        csv_data = dataframe.to_csv(index=False)
-        content_part = types.Part.from_text(text=csv_data)
-        config = types.CreateCachedContentConfig(
-            contents=[types.Content(parts=[content_part], role="user")],
-            ttl=f"{ttl_seconds}s",
-        )
-
-        cached_content = client.caches.create(model=model, config=config)
-        logger.info("Successfully created cached content: %s", cached_content.name)
-        return cached_content.name
-    except (exceptions.GoogleAPICallError, ValueError) as exception:
-        logger.error("Failed to create cached content: %s", exception)
-        return None
-
-
 def generate_content(
-    client: genai.Client,
     prompt: str,
-    tools: Optional[List[types.Tool]] = None,
+    tools: Optional[List[Tool]] = None,
     model_id: Optional[str] = None,
-    cached_content_name: Optional[str] = None,
-) -> Optional[types.GenerateContentResponse]:
+) -> Optional[genai.types.GenerateContentResponse]:
     """
-    Generates content using the Gemini API with enhanced features.
+    Generates content using the Gemini API.
 
     Args:
-        client: The initialized Gemini client.
         prompt: The prompt to send to the model.
         tools: A list of tools for the model to use.
         model_id: The specific model ID to use. If None, one is chosen.
-        cached_content_name: The resource name of a cached content to use.
 
     Returns:
         The response object from the Gemini API, or None on failure.
@@ -104,22 +74,14 @@ def generate_content(
         model_id = _get_model_for_prompt(prompt)
 
     generation_config = GenerationConfig(temperature=0)
-    model_kwargs = {"generation_config": generation_config}
-
-    if cached_content_name:
-        # Note: When using a cache, tools cannot be used.
-        generation_config.cached_content = cached_content_name
-        logger.info(
-            "Using cached content: %s. Tools will be disabled.", cached_content_name
-        )
-    else:
-        model_kwargs["tools"] = tools or []
 
     try:
         logger.info("Generating content with model: %s", model_id)
-        model = GenerativeModel(model_id)
-        response = model.generate_content(contents=prompt, **model_kwargs)
+        model = genai.GenerativeModel(model_id)
+        response = model.generate_content(
+            contents=prompt, generation_config=generation_config, tools=tools
+        )
         return response
-    except (exceptions.GoogleAPICallError, ValueError) as exception:
-        logger.error("Gemini API call failed: %s", exception)
+    except (exceptions.GoogleAPICallError, ValueError, TypeError) as e:
+        logger.error("Gemini API call failed: %s", e)
         return None
