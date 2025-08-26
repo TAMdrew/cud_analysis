@@ -298,7 +298,7 @@ class GCSDataLoader:
             bucket = self.storage_client.bucket(self.bucket_name)
             blob = bucket.blob(blob_path)
             blob.upload_from_filename(local_path)
-            logger.info("Report uploaded to gs://%s/%s", self.bucket_name, blob_path)
+            logger.error("Failed to upload report to GCS bucket '%s': %s", self.bucket_name, e)
             return True
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Could not upload report to GCS: %s", e)
