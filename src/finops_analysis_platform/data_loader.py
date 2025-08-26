@@ -5,10 +5,12 @@ authenticating with Google Cloud Storage and loading billing, recommendations,
 and other data files. If GCS access fails, it falls back to generating
 realistic sample data for demonstration purposes.
 """
+from __future__ import annotations
+
 import io
 import logging
 import random
-from typing import Dict
+from typing import Dict, Union
 
 import google.auth
 import numpy as np
@@ -135,7 +137,7 @@ class GCSDataLoader:
         self.bucket_name = bucket_name
         self.storage_client = self._initialize_client()
 
-    def _initialize_client(self) -> storage.Client | None:
+    def _initialize_client(self) -> Union[storage.Client, None]:
         """Initializes the GCS client, handling authentication."""
         try:
             credentials, project = google.auth.default()
@@ -155,7 +157,7 @@ class GCSDataLoader:
             logger.error("An unexpected error occurred during GCS client init: %s", e)
             return None
 
-    def load_all_data(self) -> Dict[str, pd.DataFrame | bool]:
+    def load_all_data(self) -> Dict[str, Union[pd.DataFrame, bool]]:
         """
         Loads all CSV files from the GCS bucket.
         If GCS access fails, it falls back to generating sample data.
@@ -216,7 +218,7 @@ class GCSDataLoader:
 
         return data_frames
 
-    def _process_blob(self, blob: storage.Blob) -> pd.DataFrame | None:
+    def _process_blob(self, blob: storage.Blob) -> Union[pd.DataFrame, None]:
         """Downloads and parses a single CSV blob into a DataFrame."""
         try:
             content = blob.download_as_text()
@@ -230,7 +232,7 @@ class GCSDataLoader:
             logger.warning("Could not load or parse blob %s: %s", blob.name, e)
             return None
 
-    def _generate_sample_data(self) -> Dict[str, pd.DataFrame | bool]:
+    def _generate_sample_data(self) -> Dict[str, Union[pd.DataFrame, bool]]:
         """Generates a dictionary of sample data for demonstration."""
         logger.info("Generating sample data sets for demonstration purposes.")
         return {
