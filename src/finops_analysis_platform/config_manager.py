@@ -51,18 +51,17 @@ class ConfigManager:
             with open(self.config_path, "r", encoding="utf-8") as f:
                 self.config = yaml.safe_load(f)
                 logger.info("Loaded configuration from %s", self.config_path)
+        elif self.config_path != Path("config.yaml"):  # Only warn if non-default path
+            logger.error(
+                "Config file not found at specified path: %s",
+                self.config_path,
+            )
+            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
         else:
-            if self.config_path != Path("config.yaml"):  # Only warn if non-default path
-                logger.error(
-                    "Config file not found at specified path: %s",
-                    self.config_path,
-                )
-                raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-            else:
-                logger.info(
-                    "Default config file not found. Using environment variables only."
-                )
-                self.config = self._get_default_config()
+            logger.info(
+                "Default config file not found. Using environment variables only."
+            )
+            self.config = self._get_default_config()
 
         self._override_with_env_vars(self.config)
 
@@ -71,7 +70,7 @@ class ConfigManager:
         return {
             "gcp": {"location": "us-central1"},
             "analysis": {"risk_tolerance": "medium"},
-            "cud_strategy": {"base_layer_coverage": 40}
+            "cud_strategy": {"base_layer_coverage": 40},
         }
 
     def _override_with_env_vars(self, config_dict: Dict[str, Any], prefix: str = ""):
@@ -87,17 +86,25 @@ class ConfigManager:
                 env_var_name = (prefix + key).upper()
                 env_value = os.getenv(env_var_name)
                 if env_value is not None:
+                    # Attempt to cast the environment variable to the original type
+                    original_value = config_dict[key]
                     try:
-                        original_type = type(value) if value is not None else str
-                        if original_type == bool:
+                        if original_value is None:
+                            config_dict[key] = env_value
+                        elif isinstance(original_value, bool):
                             config_dict[key] = env_value.lower() in (
                                 "true",
                                 "1",
                                 "t",
                                 "yes",
                             )
-                        else:
-                            config_dict[key] = original_type(env_value)
+                        elif isinstance(original_value, int):
+                            config_dict[key] = int(env_value)
+                        elif isinstance(original_value, float):
+                            config_dict[key] = float(env_value)
+                        else:  # Treat as string by default
+                            config_dict[key] = env_value
+
                         logger.info(
                             "Overriding config '%s' with value from env var '%s'.",
                             prefix + key,
@@ -106,9 +113,9 @@ class ConfigManager:
                     except (ValueError, TypeError):
                         config_dict[key] = env_value
                         logger.warning(
-                            "Could not cast env var '%s' to type %s. Using str.",
+                            "Could not cast env var '%s' to type of '%s'. Using string.",
                             env_var_name,
-                            original_type,
+                            key,
                         )
 
     def get(self, key: str, default: Any = None) -> Any:

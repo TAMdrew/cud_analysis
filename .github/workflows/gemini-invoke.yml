@@ -59,16 +59,13 @@ jobs:
         id: 'generate_token'
         if: |-
           ${{ vars.APP_ID }}
-        uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
+        uses: 'actions/create-github-app-token@v2'
         with:
           app-id: '${{ vars.APP_ID }}'
           private-key: '${{ secrets.APP_PRIVATE_KEY }}'
 
       - name: 'Get context from event'
         id: 'get_context'
-        env:
-          EVENT_NAME: '${{ github.event_name }}'
-          EVENT_PAYLOAD: '${{ toJSON(github.event) }}'
         run: |-
           set -euo pipefail
 
@@ -76,22 +73,22 @@ jobs:
           ISSUE_NUMBER=""
           IS_PR="false"
 
-          if [[ "${EVENT_NAME}" == "issues" ]]; then
-            USER_REQUEST=$(echo "${EVENT_PAYLOAD}" | jq -r .issue.body)
-            ISSUE_NUMBER=$(echo "${EVENT_PAYLOAD}" | jq -r .issue.number)
-          elif [[ "${EVENT_NAME}" == "issue_comment" ]]; then
-            USER_REQUEST=$(echo "${EVENT_PAYLOAD}" | jq -r .comment.body)
-            ISSUE_NUMBER=$(echo "${EVENT_PAYLOAD}" | jq -r .issue.number)
-            if [[ $(echo "${EVENT_PAYLOAD}" | jq -r .issue.pull_request) != "null" ]]; then
+          if [[ "${{ github.event_name }}" == "issues" ]]; then
+            USER_REQUEST="${{ github.event.issue.body }}"
+            ISSUE_NUMBER="${{ github.event.issue.number }}"
+          elif [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            USER_REQUEST="${{ github.event.comment.body }}"
+            ISSUE_NUMBER="${{ github.event.issue.number }}"
+            if [[ "${{ github.event.issue.pull_request }}" != "null" ]]; then
               IS_PR="true"
             fi
-          elif [[ "${EVENT_NAME}" == "pull_request_review" ]]; then
-            USER_REQUEST=$(echo "${EVENT_PAYLOAD}" | jq -r .review.body)
-            ISSUE_NUMBER=$(echo "${EVENT_PAYLOAD}" | jq -r .pull_request.number)
+          elif [[ "${{ github.event_name }}" == "pull_request_review" ]]; then
+            USER_REQUEST="${{ github.event.review.body }}"
+            ISSUE_NUMBER="${{ github.event.pull_request.number }}"
             IS_PR="true"
-          elif [[ "${EVENT_NAME}" == "pull_request_review_comment" ]]; then
-            USER_REQUEST=$(echo "${EVENT_PAYLOAD}" | jq -r .comment.body)
-            ISSUE_NUMBER=$(echo "${EVENT_PAYLOAD}" | jq -r .pull_request.number)
+          elif [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+            USER_REQUEST="${{ github.event.comment.body }}"
+            ISSUE_NUMBER="${{ github.event.pull_request.number }}"
             IS_PR="true"
           fi
 
@@ -109,23 +106,12 @@ jobs:
           git config --global user.name 'gemini-cli[bot]'
           git config --global user.email 'gemini-cli[bot]@users.noreply.github.com'
 
-      - name: 'Checkout PR branch'
-        if: |-
-          ${{  steps.get_context.outputs.is_pr == 'true' }}
-        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
+      - name: 'Checkout code'
+        uses: 'actions/checkout@v4'
         with:
           token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           repository: '${{ github.repository }}'
-          ref: 'refs/pull/${{ steps.get_context.outputs.issue_number }}/head'
-          fetch-depth: 0
-
-      - name: 'Checkout main branch'
-        if: |-
-          ${{  steps.get_context.outputs.is_pr == 'false' }}
-        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
-        with:
-          token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
-          repository: '${{ github.repository }}'
+          ref: "${{ steps.get_context.outputs.is_pr == 'true' && format('refs/pull/{0}/head', steps.get_context.outputs.issue_number) || github.ref }}"
           fetch-depth: 0
 
       - name: 'Acknowledge request'
@@ -134,7 +120,6 @@ jobs:
           GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           ISSUE_NUMBER: '${{ steps.get_context.outputs.issue_number }}'
           REPOSITORY: '${{ github.repository }}'
-          REQUEST_TYPE: '${{ steps.get_context.outputs.request_type }}'
         run: |-
           set -euo pipefail
           MESSAGE="@${GITHUB_ACTOR} I've received your request and I'm working on it now! 🤖"
@@ -172,9 +157,9 @@ jobs:
         run: |-
           set -euo pipefail
           if [[ "${IS_PR}" == "true" ]]; then
-            COMMENTS=$(gh pr view "${ISSUE_NUMBER}" --json comments --template '{{range .comments}}{{.author.login}}: {{.body}}{{"\n"}}{{end}}')
+            COMMENTS=$(gh pr view "${ISSUE_NUMBER}" --json comments --template '{{range .comments}}{{.author.login}}: {{.body}}{"\n"}}{{end}}')
           else
-            COMMENTS=$(gh issue view "${ISSUE_NUMBER}" --json comments --template '{{range .comments}}{{.author.login}}: {{.body}}{{"\n"}}{{end}}')
+            COMMENTS=$(gh issue view "${ISSUE_NUMBER}" --json comments --template '{{range .comments}}{{.author.login}}: {{.body}}{"\n"}}{{end}}')
           fi
           {
             echo "comments<<EOF"
@@ -300,3 +285,21 @@ jobs:
             - **Always commit and push your changes if you modify code or documentation.**
             - **If you are unsure about the fix or answer, explain your reasoning and ask clarifying questions.**
             - **Follow project conventions and best practices.**
+
+      - name: 'Post Failure Comment'
+        if: |-
+          ${{ failure() && steps.run_gemini.outcome == 'failure' }}
+        env:
+          ISSUE_NUMBER: '${{ steps.get_context.outputs.issue_number }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          ERROR_MESSAGE: '${{ steps.run_gemini.outputs.error }}'
+        uses: 'actions/github-script@v7'
+        with:
+          github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
+          script: |-
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(process.env.ISSUE_NUMBER),
+              body: 'There was a problem with the Gemini CLI. Please check the [action logs](${process.env.RUN_URL}) for details.\n\n**Error:**\n```\n${process.env.ERROR_MESSAGE}\n```'
+            })

@@ -123,10 +123,10 @@ def create_dashboard(analysis: Dict[str, Any], config_manager: ConfigManager):
 
     # 4. Top Savings Opportunities
     portfolio_layers = analysis["portfolio_recommendation"]["layers"][:10]
-    savings_values = [l["monthly_savings"] for l in portfolio_layers]
+    savings_values = [layer["monthly_savings"] for layer in portfolio_layers]
     fig.add_trace(
         go.Bar(
-            x=[l["machine_type"].upper() for l in portfolio_layers],
+            x=[layer["machine_type"].upper() for layer in portfolio_layers],
             y=savings_values,
             text=[f"${s:,.0f}" for s in savings_values],
             textposition="auto",

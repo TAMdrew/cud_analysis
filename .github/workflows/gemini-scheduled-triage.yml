@@ -2,7 +2,7 @@ name: '📋 Gemini Scheduled Issue Triage'
 
 on:
   schedule:
-    - cron: '0 * * * *' # Runs every hour
+    - cron: '0 */6 * * *' # Runs every 6 hours
   workflow_dispatch:
 
 concurrency:
@@ -17,7 +17,6 @@ permissions:
   contents: 'read'
   id-token: 'write'
   issues: 'write'
-  statuses: 'write'
 
 jobs:
   triage-issues:
@@ -25,13 +24,13 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout repository'
-        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
+        uses: 'actions/checkout@v4'
 
       - name: 'Generate GitHub App Token'
         id: 'generate_token'
         if: |-
           ${{ vars.APP_ID }}
-        uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
+        uses: 'actions/create-github-app-token@v2'
         with:
           app-id: '${{ vars.APP_ID }}'
           private-key: '${{ secrets.APP_PRIVATE_KEY }}'
@@ -40,31 +39,29 @@ jobs:
         id: 'find_issues'
         env:
           GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
-          GITHUB_REPOSITORY: '${{ github.repository }}'
-          GITHUB_OUTPUT: '${{ github.output }}'
         run: |-
           set -euo pipefail
 
           echo '🔍 Finding issues without labels...'
-          NO_LABEL_ISSUES="$(gh issue list --repo "${GITHUB_REPOSITORY}" \
-            --search 'is:open is:issue no:label' --json number,title,body)"
+          NO_LABEL_ISSUES=$(gh issue list --repo "${{ github.repository }}" \
+            --search 'is:open is:issue no:label' --json number,title,body)
 
           echo '🏷️ Finding issues that need triage...'
-          NEED_TRIAGE_ISSUES="$(gh issue list --repo "${GITHUB_REPOSITORY}" \
-            --search 'is:open is:issue label:"status/needs-triage"' --json number,title,body)"
+          NEED_TRIAGE_ISSUES=$(gh issue list --repo "${{ github.repository }}" \
+            --search 'is:open is:issue label:"status/needs-triage"' --json number,title,body)
 
           echo '🔄 Merging and deduplicating issues...'
-          ISSUES="$(echo "${NO_LABEL_ISSUES}" "${NEED_TRIAGE_ISSUES}" | jq -c -s 'add | unique_by(.number)')"
+          ISSUES=$(echo "${NO_LABEL_ISSUES}" "${NEED_TRIAGE_ISSUES}" | jq -c -s 'add | unique_by(.number)')
 
           echo '📝 Setting output for GitHub Actions...'
           echo "issues_to_triage=${ISSUES}" >> "${GITHUB_OUTPUT}"
 
-          ISSUE_COUNT="$(echo "${ISSUES}" | jq 'length')"
+          ISSUE_COUNT=$(echo "${ISSUES}" | jq 'length')
           echo "✅ Found ${ISSUE_COUNT} issues to triage! 🎯"
 
       - name: 'Get Repository Labels'
         id: 'get_labels'
-        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea'
+        uses: 'actions/github-script@v7'
         with:
           github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           script: |-
@@ -122,7 +119,7 @@ jobs:
             3. For each issue, classify it by the appropriate labels from the available labels.
             4. Output a JSON array of objects, each containing the issue number,
                the labels to set, and a brief explanation. For example:
-               ```
+               ```json
                [
                  {
                    "issue_number": 123,
@@ -146,6 +143,36 @@ jobs:
             - Output only valid JSON format
             - Do not include any explanation or additional text, just the JSON
 
+            ## Examples
+
+            **Issue Title:** "Error when creating new user"
+            **Issue Body:** "I am getting a 500 error when I try to create a new user. This is blocking me from using the app."
+            **Available Labels:** "kind/bug, kind/feature, priority/p0, priority/p1, priority/p2"
+            **Output:**
+            ```json
+            [
+              {
+                "issue_number": 123,
+                "labels_to_set": ["kind/bug", "priority/p0"],
+                "explanation": "This is a critical bug report affecting main functionality"
+              }
+            ]
+            ```
+
+            **Issue Title:** "Add support for SAML authentication"
+            **Issue Body:** "We need to be able to authenticate with our SAML provider."
+            **Available Labels:** "kind/bug, kind.feature, priority/p0, priority/p1, priority/p2"
+            **Output:**
+            ```json
+            [
+              {
+                "issue_number": 456,
+                "labels_to_set": ["kind/feature"],
+                "explanation": "This is a feature request for improving the UI"
+              }
+            ]
+            ```
+
       - name: 'Apply Labels to Issues'
         if: |-
           ${{ steps.gemini_issue_analysis.outcome == 'success' &&
@@ -153,7 +180,7 @@ jobs:
         env:
           REPOSITORY: '${{ github.repository }}'
           LABELS_OUTPUT: '${{ steps.gemini_issue_analysis.outputs.summary }}'
-        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea'
+        uses: 'actions/github-script@v7'
         with:
           github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           script: |-
@@ -193,9 +220,26 @@ jobs:
                   issue_number: issueNumber,
                   body: commentBody
                 });
-                core.info(`Successfully set labels and commented on #${issueNumber}: ${entry.labels_to_set.join(', ')}${explanation}`);
+                core.info(`Successfully set labels and commented on #${issueNumber}: ${entry.labels_to_set.join(', ')}.${explanation}`);
               } else {
                 // If no labels to set, leave the issue as is
                 core.info(`No labels to set for #${issueNumber}, leaving as is`);
               }
             }
+
+      - name: 'Post Issue Analysis Failure Comment'
+        if: |-
+          ${{ failure() && steps.gemini_issue_analysis.outcome == 'failure' }}
+        env:
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          ERROR_MESSAGE: '${{ steps.gemini_issue_analysis.outputs.error }}'
+        uses: 'actions/github-script@v7'
+        with:
+          github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
+          script: |-
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(process.env.ISSUE_NUMBER),
+              body: `There is a problem with the Gemini CLI issue triaging. Please check the [action logs](${process.env.RUN_URL}) for details.\n\n**Error:**\n```\n${process.env.ERROR_MESSAGE}\n``` `
+            })

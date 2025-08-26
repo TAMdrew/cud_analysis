@@ -43,20 +43,20 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout repository'
-        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
+        uses: 'actions/checkout@v4'
 
       - name: 'Generate GitHub App Token'
         id: 'generate_token'
         if: |-
           ${{ vars.APP_ID }}
-        uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
+        uses: 'actions/create-github-app-token@v2'
         with:
           app-id: '${{ vars.APP_ID }}'
           private-key: '${{ secrets.APP_PRIVATE_KEY }}'
 
       - name: 'Get Repository Labels'
         id: 'get_labels'
-        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea'
+        uses: 'actions/github-script@v7'
         with:
           github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           script: |-
@@ -116,11 +116,11 @@ jobs:
                variables: "${ISSUE_TITLE}" and "${ISSUE_BODY}".
             3. Classify the issue by the appropriate labels from the available labels.
             4. Output the appropriate labels for this issue in JSON format with explanation, for example:
-               ```
+               ```json
                {"labels_to_set": ["kind/bug", "priority/p0"], "explanation": "This is a critical bug report affecting main functionality"}
                ```
             5. If the issue cannot be classified using the available labels, output:
-               ```
+               ```json
                {"labels_to_set": [], "explanation": "Unable to classify this issue with available labels"}
                ```
 
@@ -132,6 +132,24 @@ jobs:
             - Output only valid JSON format
             - Do not include any explanation or additional text, just the JSON
 
+            ## Examples
+
+            **Issue Title:** "Error when creating new user"
+            **Issue Body:** "I am getting a 500 error when I try to create a new user. This is blocking me from using the app."
+            **Available Labels:** "kind/bug, kind/feature, priority/p0, priority/p1, priority/p2"
+            **Output:**
+            ```json
+            {"labels_to_set": ["kind/bug", "priority/p0"], "explanation": "This is a critical bug report affecting main functionality"}
+            ```
+
+            **Issue Title:** "Add support for SAML authentication"
+            **Issue Body:** "We need to be able to authenticate with our SAML provider."
+            **Available Labels:** "kind/bug, kind/feature, priority/p0, priority/p1, priority/p2"
+            **Output:**
+            ```json
+            {"labels_to_set": ["kind/feature"], "explanation": "This is a feature request for a new authentication method."}
+            ```
+
       - name: 'Apply Labels to Issue'
         if: |-
           ${{ steps.gemini_issue_analysis.outputs.summary != '' }}
@@ -139,7 +157,7 @@ jobs:
           REPOSITORY: '${{ github.repository }}'
           ISSUE_NUMBER: '${{ github.event.issue.number }}'
           LABELS_OUTPUT: '${{ steps.gemini_issue_analysis.outputs.summary }}'
-        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea'
+        uses: 'actions/github-script@v7'
         with:
           github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           script: |-
@@ -177,10 +195,10 @@ jobs:
       - name: 'Add Triage Comment'
         if: |-
           ${{ steps.gemini_issue_analysis.outputs.summary != '' }}
-        uses: actions/github-script@v6
+        uses: 'actions/github-script@v7'
         with:
           github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
-          script: |
+          script: |-
             const rawLabels = `${{ steps.gemini_issue_analysis.outputs.summary }}`;
             const trimmedLabels = rawLabels.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '').trim();
             const parsedLabels = JSON.parse(trimmedLabels);
@@ -202,7 +220,8 @@ jobs:
         env:
           ISSUE_NUMBER: '${{ github.event.issue.number }}'
           RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea'
+          ERROR_MESSAGE: '${{ steps.gemini_issue_analysis.outputs.error }}'
+        uses: 'actions/github-script@v7'
         with:
           github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           script: |-
@@ -210,5 +229,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: parseInt(process.env.ISSUE_NUMBER),
-              body: 'There is a problem with the Gemini CLI issue triaging. Please check the [action logs](${process.env.RUN_URL}) for details.'
+              body: 'There is a problem with the Gemini CLI issue triaging. Please check the [action logs](${process.env.RUN_URL}) for details.\n\n**Error:**\n```\n${process.env.ERROR_MESSAGE}\n```'
             })

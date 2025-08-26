@@ -1,5 +1,70 @@
+# .pylintrc
 [MAIN]
-disable=C0114,C0115,C0116,R0903,W0511
+# A comma-separated list of plugin modules to load.
+load-plugins=pylint.extensions.docparams,pylint.extensions.check_elif
+
+# The default encoding to use for analyzed files.
+source-encoding=utf-8
+
+[MESSAGES CONTROL]
+# Disable the given messages.
+disable=
+    C0114, # missing-module-docstring
+    C0115, # missing-class-docstring
+    C0116, # missing-function-docstring
+    R0903, # too-few-public-methods
+    W0511, # fixme
+    R0913, # too-many-arguments
+    R0902, # too-many-instance-attributes
+    W0212, # protected-access
+    C0415, # import-outside-toplevel
+    E0401  # import-error
+
+# Enable the given messages.
+enable=
+    useless-suppression,
+    deprecated-pragma,
+    use-symbolic-message-instead
+
+[FORMAT]
+# Maximum number of characters on a single line.
+max-line-length=88
+
+# Maximum number of lines in a module.
+max-module-lines=1000
+
+# Regexp for accepted argument names.
+argument-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Regexp for accepted variable names.
+variable-rgx=[a-z_][a-z0-9_]{2,30}$
+
+[DESIGN]
+# Maximum number of parents for a class (see R0901).
+max-parents=7
+
+# Maximum number of public methods for a class (see R0904).
+max-public-methods=20
+
+[SIMILARITIES]
+# Minimum lines number of a similarity.
+min-similarity-lines=4
+
+# Ignore comments when computing similarities.
+ignore-comments=yes
+
+# Ignore docstrings when computing similarities.
+ignore-docstrings=yes
+
+# Ignore imports when computing similarities.
+ignore-imports=yes
 
 [REPORTS]
+# Set the output format. Available formats are text, parseable, colorized, json and msvs.
+output-format=colorized
+
+# Put messages in a separate file for each module / package specified on the command line instead of printing them on stdout.
+files-output=no
+
+# Tells whether to display a full report or only the messages
 reports=no

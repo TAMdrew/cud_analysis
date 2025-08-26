@@ -1,13 +1,16 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
 dist/
-downloads/
 eggs/
 .eggs/
 lib/
@@ -16,79 +19,50 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
-*.egg
-MANIFEST
-
-# Virtual Environments
-.env
+*.md5
+*.tgz
 .venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
 finops_venv/
+finops_venv_py312/
+
+# Editors
+.project
+.settings
+.vscode
+.idea
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+.Trashes
+Thumbs.db
+
+# Testing
+.coverage
+.pytest_cache
+/htmlcov
+
+# MyPy
+.mypy_cache/
+
+# ruff
+.ruff_cache/
+
+# Logs
+*.log
+logs/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-*/.ipynb_checkpoints/*
-notebooks/*_CUD_Analysis_Platform.ipynb
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Build artifacts
-build/
-dist/
-*.egg-info
+# Profiling reports
 profiling_reports/
-
-# Pytest cache
-.pytest_cache/
-*~
-.DS_Store
-
-# Project specific
-*.csv
-*.pdf
-*.xlsx
-*.xls
-cfo_cud_report_*.pdf
-*.log
-*.bak
-
-# Credentials and secrets
-credentials.json
-service-account-key.json
-*.key
-*.pem
-.gcp/
-.google/
-
-# Test and coverage
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Documentation builds
-docs/_build/
-docs/_static/
-docs/_templates/
-
-# Temporary files
-*.tmp
-temp/
-tmp/
-cleanup_finops_files.sh

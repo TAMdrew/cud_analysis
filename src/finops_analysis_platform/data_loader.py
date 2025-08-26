@@ -5,6 +5,7 @@ authenticating with Google Cloud Storage and loading billing, recommendations,
 and other data files. If GCS access fails, it falls back to generating
 realistic sample data for demonstration purposes.
 """
+
 from __future__ import annotations
 
 import io
@@ -19,6 +20,9 @@ import numpy as np
 import pandas as pd
 from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import storage
+
+from .config_manager import ConfigManager
+from .data_loader_protocol import DataLoader
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +45,19 @@ def _generate_realistic_cost(usage: float, sku: str) -> float:
     return usage * cost_multiplier * (1 + random.uniform(-0.1, 0.1))
 
 
-def _generate_realistic_cost_vectorized(usage_series: pd.Series, sku_series: pd.Series) -> pd.Series:
+def _generate_realistic_cost_vectorized(
+    usage_series: pd.Series,
+    sku_series: pd.Series,
+) -> pd.Series:
     """Vectorized cost generation for better performance."""
     base_costs = {
-        "n2": 0.1, "e2": 0.05, "c2": 0.15, "m1": 0.5,
-        "t2": 0.08, "a2": 1.2, "gpu": 2.5
+        "n2": 0.1,
+        "e2": 0.05,
+        "c2": 0.15,
+        "m1": 0.5,
+        "t2": 0.08,
+        "a2": 1.2,
+        "gpu": 2.5,
     }
 
     # Extract SKU families
@@ -143,7 +155,7 @@ def generate_sample_spend_distribution() -> Dict[str, float]:
     }
 
 
-class GCSDataLoader:
+class GCSDataLoader(DataLoader):
     """Loads data from a structured GCS bucket."""
 
     GCS_STRUCTURE = {
@@ -168,10 +180,7 @@ class GCSDataLoader:
                 "Proceeding with sample data generation as fallback."
             )
             return None
-        # pylint: disable=broad-exception-caught
-        # A broad exception is caught here to handle any unexpected errors
-        # during GCS client initialization and allow fallback to sample data.
-        except Exception as e:
+        except (google.api_core.exceptions.GoogleAPICallError, OSError) as e:
             logger.error("An unexpected error occurred during GCS client init: %s", e)
             return None
 
@@ -181,20 +190,22 @@ class GCSDataLoader:
         If GCS access fails, it falls back to generating sample data.
         """
         if not self.storage_client:
-            return self._generate_sample_data()
+            return SampleDataLoader().load_all_data()
 
         logger.info("Starting data load from GCS bucket: gs://%s", self.bucket_name)
         data_frames = self._load_data_from_gcs()
 
         if not data_frames:
             logger.warning("No data loaded from GCS. Falling back to sample data.")
-            return self._generate_sample_data()
+            return SampleDataLoader().load_all_data()
 
         self._log_summary(data_frames)
         return data_frames
 
     def _load_data_from_gcs(self) -> Dict[str, pd.DataFrame]:
         """Iterates through GCS structure and loads data from blobs."""
+        if not self.storage_client:
+            return {}
         data_frames: Dict[str, pd.DataFrame] = {}
         try:
             bucket = self.storage_client.bucket(self.bucket_name)
@@ -225,10 +236,7 @@ class GCSDataLoader:
                         len(valid_dfs),
                         data_type,
                     )
-        # pylint: disable=broad-exception-caught
-        # A broad exception is caught here because many things can fail
-        # (network, permissions) and the goal is to fallback gracefully.
-        except Exception as e:
+        except (google.api_core.exceptions.GoogleAPICallError, OSError) as e:
             logger.error(
                 "Failed to access GCS bucket 'gs://%s': %s", self.bucket_name, e
             )
@@ -243,22 +251,9 @@ class GCSDataLoader:
             df = pd.read_csv(io.StringIO(content))
             logger.debug("Loaded %s: %d rows.", blob.name, len(df))
             return df
-        # pylint: disable=broad-exception-caught
-        # A broad exception is caught because CSV parsing can fail in many
-        # ways; this allows the loader to skip corrupted files.
-        except Exception as e:
+        except (pd.errors.ParserError, ValueError) as e:
             logger.warning("Could not load or parse blob %s: %s", blob.name, e)
             return None
-
-    def _generate_sample_data(self) -> Dict[str, Union[pd.DataFrame, bool]]:
-        """Generates a dictionary of sample data for demonstration."""
-        logger.info("Generating sample data sets for demonstration purposes.")
-        return {
-            "billing": generate_sample_billing_data(),
-            "recommendations": generate_sample_recommendations_data(),
-            "manual_analysis": generate_sample_manual_analysis_data(),
-            "sample_data": True,
-        }
 
     def _log_summary(self, data_frames: Dict[str, pd.DataFrame]):
         """Logs a summary of the loaded data."""
@@ -275,7 +270,7 @@ class GCSDataLoader:
                     cols.append("...")
                 summary_lines.append(f"  - Columns: {', '.join(cols)}")
         summary_lines.append("\n" + "=" * 60)
-        logger.info("\\n".join(summary_lines))
+        logger.info("\n".join(summary_lines))
 
     def save_report_to_gcs(self, filename: str, local_path: str) -> bool:
         """Saves a generated report to the GCS reports path."""
@@ -298,12 +293,35 @@ class GCSDataLoader:
             blob.upload_from_filename(local_path)
             logger.info("Report uploaded to gs://%s/%s", self.bucket_name, blob_path)
             return True
-        except Exception as e:
+        except (google.api_core.exceptions.GoogleAPICallError, OSError) as e:
             logger.error("Could not upload report to GCS: %s", e)
             return False
 
 
-def load_data_from_config(config_manager):
+class SampleDataLoader(DataLoader):
+    """Generates sample data for demonstration purposes."""
+
+    def load_all_data(self) -> Dict[str, Union[pd.DataFrame, bool]]:
+        """Generates a dictionary of sample data for demonstration."""
+        logger.info("Generating sample data sets for demonstration purposes.")
+        return {
+            "billing": generate_sample_billing_data(),
+            "recommendations": generate_sample_recommendations_data(),
+            "manual_analysis": generate_sample_manual_analysis_data(),
+            "sample_data": True,
+        }
+
+
+def get_data_loader(config_manager: ConfigManager) -> DataLoader:
+    """Factory function to get the appropriate data loader."""
+    if config_manager.get("gcp.bucket_name"):
+        return GCSDataLoader(bucket_name=config_manager.get("gcp.bucket_name"))
+    return SampleDataLoader()
+
+
+def load_data_from_config(
+    config_manager: ConfigManager,
+) -> Dict[str, Union[pd.DataFrame, bool]]:
     """
     Loads all datasets from GCS based on the application configuration.
 
@@ -313,6 +331,5 @@ def load_data_from_config(config_manager):
     Returns:
         A dictionary containing the loaded dataframes.
     """
-    gcs_config = config_manager.get("gcs", {})
-    loader = GCSDataLoader(bucket_name=gcs_config.get("bucket_name"))
+    loader = get_data_loader(config_manager)
     return loader.load_all_data()
