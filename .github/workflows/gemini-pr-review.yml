@@ -32,9 +32,7 @@ defaults:
 permissions:
   contents: 'read'
   id-token: 'write'
-  issues: 'write'
   pull-requests: 'write'
-  statuses: 'write'
 
 jobs:
   review-pr:
@@ -79,68 +77,41 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout PR code'
-        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
+        uses: 'actions/checkout@v4'
 
       - name: 'Generate GitHub App Token'
         id: 'generate_token'
         if: |-
           ${{ vars.APP_ID }}
-        uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
+        uses: 'actions/create-github-app-token@v2'
         with:
           app-id: '${{ vars.APP_ID }}'
           private-key: '${{ secrets.APP_PRIVATE_KEY }}'
 
-      - name: 'Get PR details (pull_request & workflow_dispatch)'
+      - name: 'Get PR details'
         id: 'get_pr'
-        if: |-
-          ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         env:
           GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
-          EVENT_NAME: '${{ github.event_name }}'
-          WORKFLOW_PR_NUMBER: '${{ github.event.inputs.pr_number }}'
-          PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number }}'
         run: |-
           set -euo pipefail
 
-          if [[ "${EVENT_NAME}" = "workflow_dispatch" ]]; then
-            PR_NUMBER="${WORKFLOW_PR_NUMBER}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
           else
-            PR_NUMBER="${PULL_REQUEST_NUMBER}"
+            PR_NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
           fi
 
           echo "pr_number=${PR_NUMBER}" >> "${GITHUB_OUTPUT}"
 
-          # Get PR details
-          PR_DATA="$(gh pr view "${PR_NUMBER}" --json title,body,additions,deletions,changedFiles,baseRefName,headRefName)"
-          echo "pr_data=${PR_DATA}" >> "${GITHUB_OUTPUT}"
-
-          # Get file changes
-          CHANGED_FILES="$(gh pr diff "${PR_NUMBER}" --name-only)"
-          {
-            echo "changed_files<<EOF"
-            echo "${CHANGED_FILES}"
-            echo "EOF"
-          } >> "${GITHUB_OUTPUT}"
-
-
-      - name: 'Get PR details (issue_comment & reviews)'
-        id: 'get_pr_comment'
-        if: |-
-          ${{ github.event_name == 'issue_comment' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment' }}
-        env:
-          GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
-          COMMENT_BODY: '${{ github.event.comment.body || github.event.review.body }}'
-          PR_NUMBER: '${{ github.event.issue.number || github.event.pull_request.number }}'
-        run: |-
-          set -euo pipefail
-
-          echo "pr_number=${PR_NUMBER}" >> "${GITHUB_OUTPUT}"
-
           # Extract additional instructions from comment
-          ADDITIONAL_INSTRUCTIONS="$(
-            echo "${COMMENT_BODY}" | sed 's/.*@gemini-cli \/review//' | xargs
-          )"
-          echo "additional_instructions=${ADDITIONAL_INSTRUCTIONS}" >> "${GITHUB_OUTPUT}"
+          if [[ "${{ github.event_name }}" == "issue_comment" || "${{ github.event_name }}" == "pull_request_review" || "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+            ADDITIONAL_INSTRUCTIONS="$(
+              echo "${{ github.event.comment.body || github.event.review.body }}" | sed 's/.*@gemini-cli \/review//' | xargs
+            )"
+            echo "additional_instructions=${ADDITIONAL_INSTRUCTIONS}" >> "${GITHUB_OUTPUT}"
+          fi
 
           # Get PR details
           PR_DATA="$(gh pr view "${PR_NUMBER}" --json title,body,additions,deletions,changedFiles,baseRefName,headRefName)"
@@ -159,10 +130,10 @@ jobs:
         id: 'gemini_pr_review'
         env:
           GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
-          PR_NUMBER: '${{ steps.get_pr.outputs.pr_number || steps.get_pr_comment.outputs.pr_number }}'
-          PR_DATA: '${{ steps.get_pr.outputs.pr_data || steps.get_pr_comment.outputs.pr_data }}'
-          CHANGED_FILES: '${{ steps.get_pr.outputs.changed_files || steps.get_pr_comment.outputs.changed_files }}'
-          ADDITIONAL_INSTRUCTIONS: '${{ steps.get_pr.outputs.additional_instructions || steps.get_pr_comment.outputs.additional_instructions }}'
+          PR_NUMBER: '${{ steps.get_pr.outputs.pr_number }}'
+          PR_DATA: '${{ steps.get_pr.outputs.pr_data }}'
+          CHANGED_FILES: '${{ steps.get_pr.outputs.changed_files }}'
+          ADDITIONAL_INSTRUCTIONS: '${{ steps.get_pr.outputs.additional_instructions }}'
           REPOSITORY: '${{ github.repository }}'
         with:
           gemini_cli_version: '${{ vars.GEMINI_CLI_VERSION }}'
@@ -280,7 +251,7 @@ jobs:
                 Pay special attention to line numbers when creating comments, particularly if there is a code suggestion.
                 Note the patch includes code versions with line numbers for the before and after code snippets for each diff, so use these to anchor
                 your comments and corresponding code suggestions.
-              * Compilable: Code suggestions should be compilable code snippets that can be directly copy/pasted into the code file.
+              * Compilable: Code suggestions should be compilable code snippets that can be directly copy/paste into the code file.
                 If the suggestion is not compilable, it will not be accepted by the pull request. Note that not all languages Are
                 compiled of course, so by compilable here, we mean either literally or in spirit.
               * Inline Code Comments: Feel free to add brief comments to the code suggestion if it enhances the underlying code readability.
@@ -460,7 +431,7 @@ jobs:
       - name: 'Post PR review failure comment'
         if: |-
           ${{ failure() && steps.gemini_pr_review.outcome == 'failure' }}
-        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea'
+        uses: 'actions/github-script@v7'
         with:
           github-token: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           script: |-
@@ -468,5 +439,5 @@ jobs:
               owner: '${{ github.repository }}'.split('/')[0],
               repo: '${{ github.repository }}'.split('/')[1],
               issue_number: '${{ steps.get_pr.outputs.pr_number || steps.get_pr_comment.outputs.pr_number }}',
-              body: 'There is a problem with the Gemini CLI PR review. Please check the [action logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.'
+              body: 'There is a problem with the Gemini CLI PR review. Please check the [action logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.\n\n**Error:**\n```\n${{ steps.gemini_pr_review.outputs.error }}\n```'
             })

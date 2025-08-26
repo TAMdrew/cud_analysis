@@ -8,9 +8,14 @@ import click
 
 from .config_manager import ConfigManager
 from .core import CUDAnalyzer
-from .data_loader import GCSDataLoader
+from .data_loader import get_data_loader
+from .discount_mapping import MachineTypeDiscountMapping
+from .portfolio_recommender import AIPortfolioRecommender, RuleBasedPortfolioRecommender
 from .profiler import create_profile_report
 from .reporting import PDFReportGenerator, create_dashboard
+from .risk_assessor import RiskAssessor
+from .savings_calculator import SavingsCalculator
+from .spend_analyzer import SpendAnalyzer
 
 
 @click.group()
@@ -29,13 +34,28 @@ def run(config):
     click.echo(f"✅ Loaded configuration from {config}")
 
     # Load data
-    gcs_config = config_manager.get("gcs", {})
-    loader = GCSDataLoader(bucket_name=gcs_config.get("bucket_name"))
+    loader = get_data_loader(config_manager)
     data = loader.load_all_data()
     billing_data = data.get("billing")
 
+    # Initialize components
+    discount_mapping = MachineTypeDiscountMapping()
+    spend_analyzer = SpendAnalyzer(discount_mapping)
+    savings_calculator = SavingsCalculator(config_manager, discount_mapping)
+    rule_based_recommender = RuleBasedPortfolioRecommender()
+    ai_recommender = AIPortfolioRecommender(config_manager)
+    risk_assessor = RiskAssessor()
+
     # Run analysis
-    analyzer = CUDAnalyzer(config_manager=config_manager, billing_data=billing_data)
+    analyzer = CUDAnalyzer(
+        config_manager=config_manager,
+        spend_analyzer=spend_analyzer,
+        savings_calculator=savings_calculator,
+        rule_based_recommender=rule_based_recommender,
+        ai_recommender=ai_recommender,
+        risk_assessor=risk_assessor,
+        billing_data=billing_data,
+    )
     analysis = analyzer.generate_comprehensive_analysis()
     click.echo("✅ Analysis complete!")
 
@@ -46,13 +66,12 @@ def run(config):
         click.echo(f"📄 PDF report generated: {report_filename}")
 
         # Upload to GCS if available
-        if loader.storage_client and loader.save_report_to_gcs(
-            report_filename, report_filename
-        ):
-            click.echo(
-                f"☁️ Report uploaded to GCS: gs://{loader.bucket_name}/"
-                f"reports/cfo_dashboard/{report_filename}"
-            )
+        if hasattr(loader, "storage_client") and loader.storage_client:
+            if loader.save_report_to_gcs(report_filename, report_filename):
+                click.echo(
+                    f"☁️ Report uploaded to GCS: gs://{loader.bucket_name}/"
+                    f"reports/cfo_dashboard/{report_filename}"
+                )
 
     # Create dashboard
     if config_manager.get("reporting", {}).get("create_dashboard", False):
@@ -79,8 +98,7 @@ def profile(config, dataset):
     click.echo(f"✅ Loaded configuration from {config}")
 
     # Load data
-    gcs_config = config_manager.get("gcs", {})
-    loader = GCSDataLoader(bucket_name=gcs_config.get("bucket_name"))
+    loader = get_data_loader(config_manager)
     data = loader.load_all_data()
 
     if dataset in data:

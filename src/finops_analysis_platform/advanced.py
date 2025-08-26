@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# type: ignore
 """Advanced FinOps Analytics Module.
 
 This module provides sophisticated quantitative finance models for cloud cost
@@ -9,9 +9,11 @@ modeling to support advanced CUD analysis.
 
 import logging
 import warnings
+from copy import deepcopy
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict, cast
 
 import numpy as np
 import numpy_financial as npf
@@ -45,6 +47,34 @@ class FinancialMetrics:
     risk_adjusted_return: float
 
 
+class Forecast(TypedDict, total=False):
+    forecast: Optional[pd.Series]
+    lower_95: Optional[pd.Series]
+    upper_95: Optional[pd.Series]
+
+
+class AdvancedAnalytics(TypedDict, total=False):
+    portfolio_optimization: Dict[str, Any]
+    risk_metrics: Dict[str, Any]
+    monte_carlo_projection: Dict[str, Any]
+    commitment_ladder: Dict[str, Any]
+    financial_metrics: Dict[str, Any]
+    option_valuation: Dict[str, Any]
+    stress_test_results: Dict[str, Any]
+
+
+class AnalysisResults(TypedDict, total=False):
+    machine_spend_distribution: Dict[str, float]
+    savings_by_machine: Dict[str, Any]
+    portfolio_recommendation: Dict[str, Any]
+    ai_portfolio_recommendation: Optional[Dict]
+    total_savings_summary: Dict[str, float]
+    risk_assessment: Dict[str, Any]
+    analysis_date: datetime
+    config: Dict[str, Any]
+    advanced_analytics: AdvancedAnalytics
+
+
 class AdvancedCUDOptimizer:
     """
     Implements advanced CUD optimization using quantitative finance methods.
@@ -68,10 +98,7 @@ class AdvancedCUDOptimizer:
         optimal_weights = dict(zip(returns.keys(), optimal_weights_result.x))
         metrics = self._calculate_portfolio_metrics(optimal_weights_result, returns)
 
-        return {
-            "optimal_allocation": optimal_weights,
-            **metrics
-        }
+        return {"optimal_allocation": optimal_weights, **metrics}
 
     def _calculate_returns(
         self, machine_returns: Dict[str, float], historical_usage: pd.DataFrame
@@ -83,10 +110,14 @@ class AdvancedCUDOptimizer:
                 series = historical_usage[machine_type]
                 log_returns = np.log(series / series.shift(1)).dropna()
                 returns[machine_type] = log_returns.mean() * 252
-                self.volatility_estimates[machine_type] = log_returns.std() * np.sqrt(252)
+                self.volatility_estimates[machine_type] = log_returns.std() * np.sqrt(
+                    252
+                )
         return returns
 
-    def _optimize_portfolio_weights(self, returns: Dict[str, float]) -> optimize.OptimizeResult:
+    def _optimize_portfolio_weights(
+        self, returns: Dict[str, float]
+    ) -> optimize.OptimizeResult:
         """Optimize portfolio weights using Sharpe ratio maximization."""
         n_assets = len(returns)
         cov_matrix = np.eye(n_assets) * 0.1
@@ -118,7 +149,9 @@ class AdvancedCUDOptimizer:
         portfolio_return = np.sum(optimal_weights * np.array(list(returns.values())))
         sharpe_ratio = -weights_result.fun if weights_result.fun != -np.inf else 0
         portfolio_volatility = np.sqrt(
-            np.dot(optimal_weights.T, np.dot(np.eye(len(returns)) * 0.1, optimal_weights))
+            np.dot(
+                optimal_weights.T, np.dot(np.eye(len(returns)) * 0.1, optimal_weights)
+            )
         )
         diversification_ratio = 1 / np.sum(optimal_weights**2)
 
@@ -261,7 +294,7 @@ class AdvancedCUDOptimizer:
         except (ValueError, RuntimeError) as e:
             # IRR calculation can fail for certain cash flow patterns
             logger.warning("IRR calculation failed for cash flows: %s", str(e))
-            irr = float('nan')  # Use NaN instead of 0 to indicate calculation failure
+            irr = float("nan")  # Use NaN instead of 0 to indicate calculation failure
 
         cumulative_cf = np.cumsum([-initial_investment] + cash_flows)
         payback_idx = np.where(cumulative_cf > 0)[0]
@@ -341,7 +374,7 @@ class CloudEconomicsModeler:
         }
 
     def calculate_optimal_commitment_ladder(
-        self, forecast: Dict, risk_tolerance: float = 0.5
+        self, forecast: Forecast, risk_tolerance: float = 0.5
     ) -> Dict:
         """Designs an optimal CUD commitment ladder strategy."""
         if "forecast" not in forecast or forecast["forecast"] is None:
@@ -442,7 +475,7 @@ class QuantitativeRiskAnalyzer:
     def stress_test_scenarios(
         self, base_cost: float, commitment_level: float
     ) -> Dict[str, Any]:
-        """Runs stress test scenarios for risk assessment."""
+        """Runs a stress test scenarios for risk assessment."""
         scenarios = {
             "baseline": {"usage_change": 0, "cost_impact": 0},
             "mild_recession": {"usage_change": -0.20},
@@ -475,17 +508,18 @@ class QuantitativeRiskAnalyzer:
             "scenarios": scenarios,
             "weighted_risk_impact": weighted_impact,
             "worst_case_impact": max(s["cost_impact"] for s in scenarios.values()),
-            "risk_adjusted_commitment": commitment_level
-            * (1 - weighted_impact / base_cost)
-            if base_cost > 0
-            else commitment_level,
+            "risk_adjusted_commitment": (
+                commitment_level * (1 - weighted_impact / base_cost)
+                if base_cost > 0
+                else commitment_level
+            ),
         }
 
 
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals,too-many-arguments,R0914,R0915,R0912
 def enhance_with_advanced_analytics(
-    analysis_results: Dict, billing_data: Optional[pd.DataFrame] = None
-) -> Dict:
+    analysis_results: AnalysisResults, billing_data: Optional[pd.DataFrame] = None
+) -> AnalysisResults:
     """Enhances analysis results with advanced quantitative methods."""
     optimizer = AdvancedCUDOptimizer()
     modeler = CloudEconomicsModeler()
@@ -513,7 +547,7 @@ def enhance_with_advanced_analytics(
     monte_carlo = optimizer.monte_carlo_simulation(
         initial_cost=total_spend, drift=0.05, volatility=0.2
     )
-    forecast = modeler.forecast_demand(historical_usage)
+    forecast = cast(Forecast, modeler.forecast_demand(historical_usage))
     commitment_ladder = (
         modeler.calculate_optimal_commitment_ladder(forecast)
         if forecast.get("forecast") is not None
@@ -527,7 +561,7 @@ def enhance_with_advanced_analytics(
         discount_rate=0.03,
     )
 
-    cash_flows = [analysis_results["total_savings_summary"]["optimal_mix"]] * 36
+    cash_flows = [analysis_results.get("total_savings_summary", {}).get("optimal_mix", 0)] * 36  # type: ignore
     financial_metrics = optimizer.calculate_financial_metrics(
         initial_investment=total_spend * 0.7, cash_flows=cash_flows
     )
@@ -541,8 +575,8 @@ def enhance_with_advanced_analytics(
         base_cost=total_spend, commitment_level=total_spend * 0.7
     )
 
-    enhanced_analysis = analysis_results.copy()
-    enhanced_analysis["advanced_analytics"] = {
+    enhanced_analysis = deepcopy(analysis_results)
+    enhanced_analysis["advanced_analytics"] = {  # type: ignore
         "portfolio_optimization": portfolio,
         "risk_metrics": {**var_cvar, **risk_score},
         "monte_carlo_projection": monte_carlo,

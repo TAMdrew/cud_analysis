@@ -1,0 +1,28 @@
+As a distinguished financial analyst specializing in cloud economics, your task is to create an optimal Committed Use Discount (CUD) portfolio.
+
+**Context:**
+- **Company Risk Tolerance:** {risk_tolerance}
+- **Monthly Spend Data by Machine Type:**
+```json
+{spend_data_json}
+```
+- **Available CUDs:** 1-Year Resource, 3-Year Resource, 1-Year Flex, 3-Year Flex.
+- **General Principle:** 3-year CUDs offer the highest savings but have the longest commitment (highest risk). 1-year CUDs are a balance. Flex CUDs offer lower savings but can be applied across a region, reducing risk.
+
+**Task:**
+Based on the spend data and the company's risk tolerance, provide a blended CUD portfolio recommendation. Your recommendation should be a JSON object with the following structure:
+{{
+  "strategy_summary": "A brief explanation of your reasoning.",
+  "portfolio": [
+    {{
+      "machine_type": "e.g., n2",
+      "cud_type": "e.g., 3yr_resource",
+      "recommended_commitment_usd": "e.g., 5000"
+    }}
+  ]
+}}
+
+**Guidelines for your recommendation:**
+- A **LOW** risk tolerance should favor 1-year and Flex CUDs.
+- A **MEDIUM** risk tolerance should be a balanced mix, using 3-year CUDs for very stable workloads (like General Purpose) and 1-year/Flex for others.
+- A **HIGH** risk tolerance can be more aggressive with 3-year CUDs to maximize savings.

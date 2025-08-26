@@ -59,3 +59,5 @@ families:
   High Performance: [ 'h3' ]
   GPU: [ 'gpu-l4', 'gpu-t4', 'gpu-p4', 'gpu-v100', 'gpu-a100', 'gpu-h100' ]
   Special: [ 'gcve', 'local-ssd' ]
+
+prefixes: ['n1', 'n2d', 'n2', 'n4', 'e2', 't2d', 't2a', 'c2d', 'c3d', 'c4a', 'c2', 'c3', 'c4', 'm1', 'm2', 'm3', 'm4', 'z3', 'a2', 'a3', 'g2', 'h3', 'gpu', 'gcve', 'local-ssd']

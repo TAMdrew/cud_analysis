@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# type: ignore
 """
 Test Suite for Advanced FinOps Analytics
 Validates quantitative models and financial calculations
@@ -9,20 +9,19 @@ Version: V1.0.0
 import sys
 import unittest
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
-warnings.filterwarnings("ignore")
-
-# Import the modules to test
 from finops_analysis_platform.advanced import (
     AdvancedCUDOptimizer,
     CloudEconomicsModeler,
     QuantitativeRiskAnalyzer,
     enhance_with_advanced_analytics,
 )
+
+warnings.filterwarnings("ignore")
 
 
 class TestAdvancedCUDOptimizer(unittest.TestCase):

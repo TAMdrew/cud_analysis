@@ -1,5 +1,3 @@
-import pandas as pd
-
 from finops_analysis_platform.config_manager import ConfigManager
 from finops_analysis_platform.data_loader import GCSDataLoader
 
