@@ -1,16 +1,16 @@
-# Byte-compiled / optimized / DLL files
+# ========================================
+# Python Core
+# ========================================
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
+*.pyo
+*.pyd
 .Python
 build/
 develop-eggs/
 dist/
+downloads/
 eggs/
 .eggs/
 lib/
@@ -22,47 +22,315 @@ wheels/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
-*.md5
-*.tgz
-.venv
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+*.egg
+MANIFEST
+pip-wheel-metadata/
+
+# ========================================
+# Virtual Environments
+# ========================================
+.venv/
+venv/
+ENV/
+env/
 finops_venv/
 finops_venv_py312/
+.conda/
+*.virtualenv
 
-# Editors
+# ========================================
+# Environment & Secrets (CRITICAL for FinOps)
+# ========================================
+.env
+.env.*
+!.env.example
+!.env.template
+*.env
+secrets/
+credentials/
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+service-account*.json
+gcp-credentials*.json
+aws-credentials
+.aws/
+.gcp/
+.azure/
+
+# ========================================
+# Data & Analytics (CRITICAL - Financial Data)
+# ========================================
+data/**/*.csv
+data/**/*.xlsx
+data/**/*.xls
+data/**/*.parquet
+data/**/*.json
+data/**/*.jsonl
+data/**/*.feather
+data/**/*.h5
+data/**/*.hdf5
+data/**/*.pkl
+data/**/*.pickle
+data/**/*.npy
+data/**/*.npz
+# Preserve sample/test data structure
+!data/sample/.gitkeep
+!data/test/
+!data/test/**/*.csv
+
+# Billing exports
+billing_exports/
+cost_reports/
+usage_reports/
+cud_reports/
+
+# ========================================
+# Jupyter Notebooks
+# ========================================
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+notebooks/scratch/
+notebooks/experimental/
+notebooks/*.html
+notebooks/*.pdf
+
+# ========================================
+# Testing & Quality
+# ========================================
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.hypothesis/
+nosetests.xml
+test-results/
+test-reports/
+.mutmut-cache
+.benchmarks/
+
+# ========================================
+# Type Checking & Linting
+# ========================================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+.pylint.d/
+
+# ========================================
+# Documentation
+# ========================================
+docs/_build/
+docs/.doctrees/
+site/
+.mkdocs/
+
+# ========================================
+# Profiling & Performance
+# ========================================
+profiling_reports/
+*.prof
+*.lprof
+*.calltree
+*.pstats
+*.dot
+*.svg
+profile_output/
+.pyinstrument/
+memory_profiler_results/
+
+# ========================================
+# Logs & Monitoring
+# ========================================
+logs/
+*.log
+*.log.*
+*.pid
+*.seed
+*.pid.lock
+.webassets-cache
+
+# ========================================
+# CI/CD & DevOps
+# ========================================
+.gitlab-ci-local/
+.github/actions/*/dist/
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+.terraformrc
+terraform.rc
+ansible/*.retry
+.vagrant/
+*.box
+
+# ========================================
+# Containerization
+# ========================================
+*.tar
+*.tar.gz
+!requirements*.txt
+docker-compose.override.yml
+.dockerignore.local
+.container-*
+
+# ========================================
+# Database & Cache
+# ========================================
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+instance/
+.redis/
+.memcached/
+*.rdb
+dump.rdb
+
+# ========================================
+# IDE & Editors
+# ========================================
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.template
+.idea/
+*.swp
+*.swo
+*~
 .project
-.settings
-.vscode
-.idea
+.classpath
+.settings/
 *.sublime-project
 *.sublime-workspace
+.atom/
+.ropeproject/
+*.iml
 
-# OS
+# ========================================
+# OS Files
+# ========================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
 .Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
 
-# Testing
-.coverage
-.pytest_cache
-/htmlcov
+# ========================================
+# Backup & Temporary
+# ========================================
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
+*.temp
+.tmp/
+tmp/
+temp/
+TEMP/
+cache/
+.cache/
 
-# MyPy
-.mypy_cache/
+# ========================================
+# Build Artifacts
+# ========================================
+*.so
+*.dylib
+*.dll
+*.class
+*.exe
+*.out
+*.app
 
-# ruff
-.ruff_cache/
+# ========================================
+# Package Management
+# ========================================
+node_modules/
+jspm_packages/
+bower_components/
+vendor/
 
-# Logs
-*.log
-logs/
+# ========================================
+# ML/AI Model Files (for Gemini integration)
+# ========================================
+models/
+*.model
+*.h5
+*.hdf5
+*.ckpt
+*.safetensors
+checkpoints/
+model_weights/
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# ========================================
+# Reports & Outputs (Keep structure, ignore content)
+# ========================================
+reports/**/*.pdf
+reports/**/*.html
+reports/**/*.xlsx
+reports/**/*.csv
+!reports/.gitkeep
+!reports/templates/
 
-# Profiling reports
-profiling_reports/
+# ========================================
+# Configuration Overrides
+# ========================================
+config.local.yaml
+config.override.yaml
+*.local.yaml
+!config.yaml
+!config.example.yaml
+
+# ========================================
+# GCP Specific
+# ========================================
+.gcloudignore
+application_default_credentials.json
+gcloud-service-key.json
+bq-results/
+dataflow-staging/
+dataflow-temp/
+
+# ========================================
+# Financial/Sensitive Documents
+# ========================================
+*.pdf
+!docs/**/*.pdf
+!README.pdf
+contracts/
+invoices/
+statements/
+budgets/
+
+# ========================================
+# Archive Files (be selective)
+# ========================================
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+# Allow specific archives if needed
+!releases/*.zip
+!dist/*.tar.gz
