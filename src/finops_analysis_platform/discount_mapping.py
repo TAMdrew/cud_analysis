@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional, cast
 
 import yaml
 
@@ -18,22 +18,19 @@ class MachineTypeDiscountMapping:
         """Initializes the discount mapping from a YAML configuration file."""
         if config_path is None:
             config_path = Path(__file__).parent / "config" / "machine_discounts.yaml"
-        self._load_discounts_from_yaml(config_path)
+        config = self._load_discounts(str(config_path))
+        self.discounts = cast(Dict[str, Dict[str, float]], config.get("discounts", {}))
+        self.prefixes: list[str] = list(self.discounts.keys())
+        self.families = cast(Dict[str, list[str]], config.get("families", {}))
 
-    def _load_discounts_from_yaml(self, path: Path):
-        """Loads discount data from the specified YAML file."""
+    def _load_discounts(self, file_path: str) -> Dict:
+        """Loads the machine discounts from a YAML file."""
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-                self.discounts = data.get("discounts", {})
-                self.families = data.get("families", {})
-                self.prefixes = data.get("prefixes", [])
-                logger.info(
-                    "Loaded %d machine types from %s", len(self.discounts), path
-                )
-        except (FileNotFoundError, yaml.YAMLError) as e:
-            logger.error("Error with discount config file %s: %s", path, e)
-            self.discounts, self.families, self.prefixes = {}, {}, []
+            with open(file_path, "r", encoding="utf-8") as file_handle:
+                return yaml.safe_load(file_handle) or {}
+        except (FileNotFoundError, yaml.YAMLError) as exception:
+            logger.error("Failed to load discount mapping file: %s", exception)
+            return {}
 
     def get_discount(self, machine_type: str, discount_type: str) -> Optional[float]:
         """Gets the discount for a given machine type and discount type."""
@@ -46,6 +43,12 @@ class MachineTypeDiscountMapping:
         for prefix in self.prefixes:
             if machine_type.startswith(prefix):
                 return prefix
+
+        # Fallback for machine types not explicitly in prefixes (like 'n1')
+        parts = machine_type.split("-")
+        if parts:
+            return parts[0]
+
         logger.debug(
             "Could not determine base type for '%s', defaulting to 'n2'.", machine_type
         )

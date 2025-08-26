@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional, Protocol
+from typing import Any, Dict, Optional, Protocol, cast
 
 from .config_manager import ConfigManager
 from .gemini_service import generate_content, initialize_gemini
@@ -27,15 +27,22 @@ class RuleBasedPortfolioRecommender(PortfolioRecommender):
         """Generates a simple, rule-based portfolio recommendation."""
         layers = []
         for machine_type, savings in savings_by_machine.items():
-            options = savings["savings_options"]
-            best_option = max(options, key=lambda k: options[k]["monthly_savings"])
-            if options[best_option]["monthly_savings"] > 0:
+            current_options = savings["savings_options"]
+            best_option = max(
+                current_options,
+                key=lambda k: cast(Dict[str, float], current_options[k])[
+                    "monthly_savings"
+                ],
+            )
+            if current_options[best_option]["monthly_savings"] > 0:
                 layers.append(
                     {
                         "machine_type": machine_type,
                         "strategy": best_option,
                         "monthly_spend": savings["stable_workload"],
-                        "monthly_savings": options[best_option]["monthly_savings"],
+                        "monthly_savings": current_options[best_option][
+                            "monthly_savings"
+                        ],
                     }
                 )
 
@@ -91,8 +98,8 @@ class AIPortfolioRecommender(PortfolioRecommender):
         spend_data_json = json.dumps(spend_data, indent=2)
 
         prompt_path = Path(__file__).parent / "prompts" / "portfolio_optimization.txt"
-        with open(prompt_path, "r", encoding="utf-8") as f:
-            prompt_template = f.read()
+        with open(prompt_path, "r", encoding="utf-8") as prompt_file:
+            prompt_template = prompt_file.read()
 
         prompt = prompt_template.format(
             risk_tolerance=risk_tolerance.upper(), spend_data_json=spend_data_json

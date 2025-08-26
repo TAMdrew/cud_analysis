@@ -48,8 +48,8 @@ class ConfigManager:
             logger.info("Loaded environment variables from %s", self.env_path)
 
         if self.config_path.is_file():
-            with open(self.config_path, "r", encoding="utf-8") as f:
-                self.config = yaml.safe_load(f)
+            with open(self.config_path, "r", encoding="utf-8") as file_handle:
+                self.config = yaml.safe_load(file_handle)
                 logger.info("Loaded configuration from %s", self.config_path)
         elif self.config_path != Path("config.yaml"):  # Only warn if non-default path
             logger.error(

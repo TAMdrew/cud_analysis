@@ -102,8 +102,10 @@ def profile(config, dataset):
     data = loader.load_all_data()
 
     if dataset in data:
-        df = data[dataset]
-        create_profile_report(df, title=f"{dataset.replace('_', ' ').title()} Dataset")
+        dataframe = data[dataset]
+        create_profile_report(
+            dataframe, title=f"{dataset.replace('_', ' ').title()} Dataset"
+        )
     else:
         click.echo(f"⚠️ Dataset '{dataset}' not found.")
 

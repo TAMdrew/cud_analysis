@@ -22,11 +22,13 @@ class SpendAnalyzer:
             return generate_sample_spend_distribution()
 
         sku_col = "SKU" if "SKU" in billing_data.columns else "Sku Description"
-        df = billing_data.copy()
-        df["Cost"] = pd.to_numeric(df["Cost"], errors="coerce")
+        dataframe = billing_data.copy()
+        dataframe["Cost"] = pd.to_numeric(dataframe["Cost"], errors="coerce")
 
         # Vectorized operation for better performance
-        df["base_type"] = df[sku_col].apply(self.discount_mapping.get_machine_base)
-        distribution = df.groupby("base_type")["Cost"].sum().to_dict()
+        dataframe["base_type"] = dataframe[sku_col].apply(
+            self.discount_mapping.get_machine_base
+        )
+        distribution = dataframe.groupby("base_type")["Cost"].sum().to_dict()
 
         return distribution

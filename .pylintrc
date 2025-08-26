@@ -3,9 +3,6 @@
 # A comma-separated list of plugin modules to load.
 load-plugins=pylint.extensions.docparams,pylint.extensions.check_elif
 
-# The default encoding to use for analyzed files.
-source-encoding=utf-8
-
 [MESSAGES CONTROL]
 # Disable the given messages.
 disable=
@@ -62,9 +59,6 @@ ignore-imports=yes
 [REPORTS]
 # Set the output format. Available formats are text, parseable, colorized, json and msvs.
 output-format=colorized
-
-# Put messages in a separate file for each module / package specified on the command line instead of printing them on stdout.
-files-output=no
 
 # Tells whether to display a full report or only the messages
 reports=no

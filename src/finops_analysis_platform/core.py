@@ -23,6 +23,7 @@ class CUDAnalyzer:
         config_manager: ConfigManager,
         spend_analyzer: SpendAnalyzer,
         savings_calculator: SavingsCalculator,
+        *,
         rule_based_recommender: RuleBasedPortfolioRecommender,
         ai_recommender: AIPortfolioRecommender,
         risk_assessor: RiskAssessor,
@@ -39,16 +40,16 @@ class CUDAnalyzer:
         self.analysis_results: Dict[str, Any] = {}
 
     def _validate_billing_data(
-        self, df: Optional[pd.DataFrame]
+        self, dataframe: Optional[pd.DataFrame]
     ) -> Optional[pd.DataFrame]:
         """Validates that the billing DataFrame has the required columns."""
-        if df is None or df.empty:
+        if dataframe is None or dataframe.empty:
             logger.warning("Billing data is empty. Analysis may use sample data.")
             return None
         required_cols = ["Cost"]
         sku_cols = ["SKU", "Sku Description"]
-        has_sku = any(col in df.columns for col in sku_cols)
-        has_required = all(col in df.columns for col in required_cols)
+        has_sku = any(col in dataframe.columns for col in sku_cols)
+        has_required = all(col in dataframe.columns for col in required_cols)
         if not has_sku or not has_required:
             logger.error(
                 "Billing data is missing required columns ('Cost' and "
@@ -56,7 +57,7 @@ class CUDAnalyzer:
             )
             return None
         logger.info("Billing data validation successful.")
-        return df
+        return dataframe
 
     def generate_comprehensive_analysis(self) -> Dict[str, Any]:
         """Generates a full CUD analysis."""

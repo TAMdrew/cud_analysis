@@ -1,0 +1,61 @@
+name: "CodeQL Security Analysis"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    # Run weekly on Monday at 01:30 UTC to catch vulnerabilities in dependencies
+    - cron: '30 1 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze Python Code
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read      # For reading actions secrets
+      contents: read     # For checking out the repository
+      security-events: write # For posting findings to the security tab
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python' ]
+        # Analysis is most effective on the latest supported version.
+        # Running on multiple versions is redundant for CodeQL's static analysis.
+        python-version: [ '3.12' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Initialize the CodeQL analysis environment.
+    # It sets up a tracer that monitors build steps to see all source code.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        # TIP: You can customize the queries run by CodeQL.
+        # For example, to run only security-extended queries:
+        # queries: +security-extended
+
+    # To ensure CodeQL has a complete view of the codebase, including all
+    # dependencies, we replicate the installation steps from the main CI workflow.
+    # This is more robust than relying on the autobuilder's heuristics.
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[dev]
+
+    # Perform the actual CodeQL analysis.
+    # This step collects the traced data and interprets it to find vulnerabilities.
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"

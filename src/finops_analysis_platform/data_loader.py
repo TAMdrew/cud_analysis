@@ -96,12 +96,14 @@ def generate_sample_billing_data(rows: int = 1000) -> pd.DataFrame:
         "Project": np.random.choice(projects, rows, p=[0.4, 0.3, 0.15, 0.1, 0.05]),
         "Start Time": start_times,
     }
-    df = pd.DataFrame(data)
-    df["End Time"] = df["Start Time"] + pd.to_timedelta(
+    dataframe = pd.DataFrame(data)
+    dataframe["End Time"] = dataframe["Start Time"] + pd.to_timedelta(
         np.random.randint(1, 24, rows), "h"
     )
-    df["Cost"] = _generate_realistic_cost_vectorized(df["Usage"], df["SKU"])
-    return df
+    dataframe["Cost"] = _generate_realistic_cost_vectorized(
+        dataframe["Usage"], dataframe["SKU"]
+    )
+    return dataframe
 
 
 def generate_sample_recommendations_data(rows: int = 50) -> pd.DataFrame:
@@ -180,8 +182,10 @@ class GCSDataLoader(DataLoader):
                 "Proceeding with sample data generation as fallback."
             )
             return None
-        except (google.api_core.exceptions.GoogleAPICallError, OSError) as e:
-            logger.error("An unexpected error occurred during GCS client init: %s", e)
+        except (google.api_core.exceptions.GoogleAPICallError, OSError) as exception:
+            logger.error(
+                "An unexpected error occurred during GCS client init: %s", exception
+            )
             return None
 
     def load_all_data(self) -> Dict[str, Union[pd.DataFrame, bool]]:
@@ -221,24 +225,28 @@ class GCSDataLoader(DataLoader):
                     logger.info("No files found in %s.", folder_path)
                     continue
 
-                df_list = [
+                dataframe_list = [
                     self._process_blob(blob)
                     for blob in blobs
                     if blob.name.endswith(".csv")
                 ]
 
                 # Filter out None values before concatenating
-                valid_dfs = [df for df in df_list if df is not None]
-                if valid_dfs:
-                    data_frames[data_type] = pd.concat(valid_dfs, ignore_index=True)
+                valid_dataframes = [df for df in dataframe_list if df is not None]
+                if valid_dataframes:
+                    data_frames[data_type] = pd.concat(
+                        valid_dataframes, ignore_index=True
+                    )
                     logger.info(
                         "Successfully loaded and combined %d files for '%s'.",
-                        len(valid_dfs),
+                        len(valid_dataframes),
                         data_type,
                     )
-        except (google.api_core.exceptions.GoogleAPICallError, OSError) as e:
+        except (google.api_core.exceptions.GoogleAPICallError, OSError) as exception:
             logger.error(
-                "Failed to access GCS bucket 'gs://%s': %s", self.bucket_name, e
+                "Failed to access GCS bucket 'gs://%s': %s",
+                self.bucket_name,
+                exception,
             )
             return {}
 
@@ -248,25 +256,25 @@ class GCSDataLoader(DataLoader):
         """Downloads and parses a single CSV blob into a DataFrame."""
         try:
             content = blob.download_as_text()
-            df = pd.read_csv(io.StringIO(content))
-            logger.debug("Loaded %s: %d rows.", blob.name, len(df))
-            return df
-        except (pd.errors.ParserError, ValueError) as e:
-            logger.warning("Could not load or parse blob %s: %s", blob.name, e)
+            dataframe = pd.read_csv(io.StringIO(content))
+            logger.debug("Loaded %s: %d rows.", blob.name, len(dataframe))
+            return dataframe
+        except (pd.errors.ParserError, ValueError) as exception:
+            logger.warning("Could not load or parse blob %s: %s", blob.name, exception)
             return None
 
     def _log_summary(self, data_frames: Dict[str, pd.DataFrame]):
         """Logs a summary of the loaded data."""
         summary_lines = ["\n" + "=" * 60, "DATA LOADING SUMMARY", "=" * 60]
-        for data_type, df in data_frames.items():
-            if isinstance(df, pd.DataFrame):
+        for data_type, dataframe in data_frames.items():
+            if isinstance(dataframe, pd.DataFrame):
                 summary_lines.append(f"\n{data_type.upper()}:")
-                summary_lines.append(f"  - Rows: {len(df):,}")
-                summary_lines.append(f"  - Columns: {len(df.columns)}")
-                mem_mb = df.memory_usage(deep=True).sum() / 1024**2
+                summary_lines.append(f"  - Rows: {len(dataframe):,}")
+                summary_lines.append(f"  - Columns: {len(dataframe.columns)}")
+                mem_mb = dataframe.memory_usage(deep=True).sum() / 1024**2
                 summary_lines.append(f"  - Memory: {mem_mb:.2f} MB")
-                cols = list(df.columns)[:5]
-                if len(df.columns) > 5:
+                cols = list(dataframe.columns)[:5]
+                if len(dataframe.columns) > 5:
                     cols.append("...")
                 summary_lines.append(f"  - Columns: {', '.join(cols)}")
         summary_lines.append("\n" + "=" * 60)
@@ -293,8 +301,8 @@ class GCSDataLoader(DataLoader):
             blob.upload_from_filename(local_path)
             logger.info("Report uploaded to gs://%s/%s", self.bucket_name, blob_path)
             return True
-        except (google.api_core.exceptions.GoogleAPICallError, OSError) as e:
-            logger.error("Could not upload report to GCS: %s", e)
+        except (google.api_core.exceptions.GoogleAPICallError, OSError) as exception:
+            logger.error("Could not upload report to GCS: %s", exception)
             return False
 
 

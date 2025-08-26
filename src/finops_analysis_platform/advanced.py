@@ -5,7 +5,6 @@ This module provides sophisticated quantitative finance models for cloud cost
 optimization, including portfolio theory, option pricing, and stochastic
 modeling to support advanced CUD analysis.
 """
-# pylint: disable=too-many-lines
 
 import logging
 import warnings
@@ -169,9 +168,11 @@ class AdvancedCUDOptimizer:
         time_horizon: int = 12,
     ) -> Dict[str, Any]:
         """Calculates Value at Risk and Conditional Value at Risk."""
-        mu, sigma = stats.norm.fit(monthly_costs)
+        mean_cost, sigma = stats.norm.fit(monthly_costs)
         n_simulations = 10000
-        simulated_costs = np.random.normal(mu, sigma, (n_simulations, time_horizon))
+        simulated_costs = np.random.normal(
+            mean_cost, sigma, (n_simulations, time_horizon)
+        )
         total_costs = np.sum(simulated_costs, axis=1)
         var_threshold = np.percentile(total_costs, (1 - confidence_level) * 100)
         cvar = np.mean(total_costs[total_costs >= var_threshold])
@@ -251,15 +252,15 @@ class AdvancedCUDOptimizer:
         n_simulations: int = 10000,
     ) -> Dict[str, Any]:
         """Runs a Monte Carlo simulation for cloud cost projections."""
-        dt = 1 / 12
+        time_step = 1 / 12
         random_shocks = np.random.normal(0, 1, (n_simulations, time_periods))
         price_paths = np.zeros((n_simulations, time_periods + 1))
         price_paths[:, 0] = initial_cost
 
-        for t in range(1, time_periods + 1):
-            price_paths[:, t] = price_paths[:, t - 1] * np.exp(
-                (drift - 0.5 * volatility**2) * dt
-                + volatility * np.sqrt(dt) * random_shocks[:, t - 1]
+        for time_period in range(1, time_periods + 1):
+            price_paths[:, time_period] = price_paths[:, time_period - 1] * np.exp(
+                (drift - 0.5 * volatility**2) * time_step
+                + volatility * np.sqrt(time_step) * random_shocks[:, time_period - 1]
             )
 
         final_costs = price_paths[:, -1]
@@ -291,9 +292,9 @@ class AdvancedCUDOptimizer:
         npv = npf.npv(discount_rate, [-initial_investment] + cash_flows)
         try:
             irr = npf.irr([-initial_investment] + cash_flows)
-        except (ValueError, RuntimeError) as e:
+        except (ValueError, RuntimeError) as exception:
             # IRR calculation can fail for certain cash flow patterns
-            logger.warning("IRR calculation failed for cash flows: %s", str(e))
+            logger.warning("IRR calculation failed for cash flows: %s", str(exception))
             irr = float("nan")  # Use NaN instead of 0 to indicate calculation failure
 
         cumulative_cf = np.cumsum([-initial_investment] + cash_flows)
@@ -330,7 +331,6 @@ class AdvancedCUDOptimizer:
         )
 
 
-# pylint: disable=too-few-public-methods
 class CloudEconomicsModeler:
     """Models cloud economics with elasticity and demand forecasting."""
 
@@ -423,7 +423,6 @@ class CloudEconomicsModeler:
         return {"ladder_strategy": ladder, "expected_monthly_savings": total_savings}
 
 
-# pylint: disable=too-few-public-methods
 class QuantitativeRiskAnalyzer:
     """Performs sophisticated risk analysis using quantitative methods."""
 
@@ -438,7 +437,9 @@ class QuantitativeRiskAnalyzer:
 
         mean_usage = historical_usage.mean()
         std_usage = historical_usage.std()
-        cv = std_usage / mean_usage if mean_usage > 0 else float("inf")
+        coefficient_of_variation = (
+            std_usage / mean_usage if mean_usage > 0 else float("inf")
+        )
 
         downside_deviations = historical_usage[historical_usage < commitment_amount]
         downside_risk = (
@@ -453,7 +454,11 @@ class QuantitativeRiskAnalyzer:
             else 0.5
         )
 
-        risk_score = cv * 20 + downside_risk * 50 + prob_underutilization * 30
+        risk_score = (
+            coefficient_of_variation * 20
+            + downside_risk * 50
+            + prob_underutilization * 30
+        )
 
         if risk_score < 30:
             risk_category = "LOW"
@@ -466,7 +471,7 @@ class QuantitativeRiskAnalyzer:
             "risk_score": min(risk_score, 100),
             "risk_category": risk_category,
             "metrics": {
-                "coefficient_of_variation": cv,
+                "coefficient_of_variation": coefficient_of_variation,
                 "downside_risk": downside_risk,
                 "underutilization_probability": prob_underutilization,
             },
@@ -516,7 +521,20 @@ class QuantitativeRiskAnalyzer:
         }
 
 
-# pylint: disable=too-many-locals,too-many-arguments,R0914,R0915,R0912
+def _calculate_historical_usage(
+    analysis_results: AnalysisResults, billing_data: Optional[pd.DataFrame] = None
+) -> pd.Series:
+    """Helper to extract or generate historical usage data."""
+    spend_dist = analysis_results.get("machine_spend_distribution", {})
+    total_spend = sum(spend_dist.values())
+
+    if billing_data is None or billing_data.empty:
+        np.random.seed(42)
+        std_dev = total_spend * 0.1 if total_spend > 0 else 1
+        return pd.Series(np.random.normal(total_spend, std_dev, 36))
+    return billing_data.groupby(pd.Grouper(freq="ME"))["Cost"].sum()
+
+
 def enhance_with_advanced_analytics(
     analysis_results: AnalysisResults, billing_data: Optional[pd.DataFrame] = None
 ) -> AnalysisResults:
@@ -525,15 +543,9 @@ def enhance_with_advanced_analytics(
     modeler = CloudEconomicsModeler()
     risk_analyzer = QuantitativeRiskAnalyzer()
 
+    historical_usage = _calculate_historical_usage(analysis_results, billing_data)
     spend_dist = analysis_results.get("machine_spend_distribution", {})
     total_spend = sum(spend_dist.values())
-
-    if billing_data is None or billing_data.empty:
-        np.random.seed(42)
-        std_dev = total_spend * 0.1 if total_spend > 0 else 1
-        historical_usage = pd.Series(np.random.normal(total_spend, std_dev, 36))
-    else:
-        historical_usage = billing_data.groupby(pd.Grouper(freq="ME"))["Cost"].sum()
 
     portfolio = (
         optimizer.calculate_optimal_portfolio(
@@ -542,7 +554,6 @@ def enhance_with_advanced_analytics(
         if len(spend_dist) > 1
         else {"optimal_allocation": {}, "sharpe_ratio": 0}
     )
-
     var_cvar = optimizer.calculate_var_cvar(historical_usage.values)
     monte_carlo = optimizer.monte_carlo_simulation(
         initial_cost=total_spend, drift=0.05, volatility=0.2
@@ -560,12 +571,12 @@ def enhance_with_advanced_analytics(
         volatility=0.2,
         discount_rate=0.03,
     )
-
-    cash_flows = [analysis_results.get("total_savings_summary", {}).get("optimal_mix", 0)] * 36  # type: ignore
+    cash_flows = [
+        analysis_results.get("total_savings_summary", {}).get("optimal_mix", 0)
+    ] * 36
     financial_metrics = optimizer.calculate_financial_metrics(
         initial_investment=total_spend * 0.7, cash_flows=cash_flows
     )
-
     risk_score = risk_analyzer.calculate_commitment_risk_score(
         commitment_amount=total_spend * 0.7,
         historical_usage=historical_usage,

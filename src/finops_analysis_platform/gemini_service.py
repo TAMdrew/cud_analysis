@@ -11,7 +11,8 @@ from typing import List, Optional
 import pandas as pd
 from google import genai
 from google.api_core import exceptions
-from google.genai import types
+from google.generativeai import GenerativeModel, types
+from google.generativeai.types import GenerationConfig
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ def _get_model_for_prompt(prompt: str) -> str:
 
 
 def create_cached_content_from_df(
-    client: genai.Client, model: str, df: pd.DataFrame, ttl_seconds: int = 3600
+    client: genai.Client, model: str, dataframe: pd.DataFrame, ttl_seconds: int = 3600
 ) -> Optional[str]:
     """
     Creates a cached content resource from a pandas DataFrame.
@@ -54,7 +55,7 @@ def create_cached_content_from_df(
     Args:
         client: The initialized Gemini client.
         model: The model name to associate with the cache.
-        df: The pandas DataFrame to cache.
+        dataframe: The pandas DataFrame to cache.
         ttl_seconds: The time-to-live for the cache in seconds.
 
     Returns:
@@ -64,7 +65,7 @@ def create_cached_content_from_df(
         logger.info(
             "Creating cached content from DataFrame with TTL %ds...", ttl_seconds
         )
-        csv_data = df.to_csv(index=False)
+        csv_data = dataframe.to_csv(index=False)
         content_part = types.Part.from_text(text=csv_data)
         config = types.CreateCachedContentConfig(
             contents=[types.Content(parts=[content_part], role="user")],
@@ -74,8 +75,8 @@ def create_cached_content_from_df(
         cached_content = client.caches.create(model=model, config=config)
         logger.info("Successfully created cached content: %s", cached_content.name)
         return cached_content.name
-    except (exceptions.GoogleAPICallError, ValueError) as e:
-        logger.error("Failed to create cached content: %s", e)
+    except (exceptions.GoogleAPICallError, ValueError) as exception:
+        logger.error("Failed to create cached content: %s", exception)
         return None
 
 
@@ -102,7 +103,9 @@ def generate_content(
     if model_id is None:
         model_id = _get_model_for_prompt(prompt)
 
-    generation_config = types.GenerateContentConfig(temperature=0)
+    generation_config = GenerationConfig(temperature=0)
+    model_kwargs = {"generation_config": generation_config}
+
     if cached_content_name:
         # Note: When using a cache, tools cannot be used.
         generation_config.cached_content = cached_content_name
@@ -110,16 +113,13 @@ def generate_content(
             "Using cached content: %s. Tools will be disabled.", cached_content_name
         )
     else:
-        generation_config.tools = tools or []
+        model_kwargs["tools"] = tools or []
 
     try:
         logger.info("Generating content with model: %s", model_id)
-        response = client.models.generate_content(
-            model=model_id,
-            contents=prompt,
-            generation_config=generation_config,
-        )
+        model = GenerativeModel(model_id)
+        response = model.generate_content(contents=prompt, **model_kwargs)
         return response
-    except (exceptions.GoogleAPICallError, ValueError) as e:
-        logger.error("Gemini API call failed: %s", e)
+    except (exceptions.GoogleAPICallError, ValueError) as exception:
+        logger.error("Gemini API call failed: %s", exception)
         return None
