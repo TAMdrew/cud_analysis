@@ -10,7 +10,7 @@ authors = [
 ]
 description = "A production-ready tool for analyzing Google Cloud Committed Use Discounts (CUDs) with CFO-level reporting capabilities."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -48,6 +48,7 @@ finops-cli = "finops_analysis_platform.cli:main"
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
     "pylint>=3.0.0",
     "black>=23.7.0",
     "isort>=5.12.0",
