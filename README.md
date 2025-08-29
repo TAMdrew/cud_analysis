@@ -2,13 +2,55 @@
 
 A production-ready, staff-level tool for analyzing Google Cloud Committed Use Discounts (CUDs) with CFO-level reporting capabilities, designed for Google Cloud notebook environments (Colab Enterprise, Vertex AI Workbench).
 
+## 🏗️ Architecture Overview
+
+The platform is designed with a clear, modular architecture that separates data handling, analysis, and reporting into distinct components. The `CUDAnalyzer` acts as a central orchestrator, consuming data and delegating tasks to specialized sub-modules.
+
+```mermaid
+graph TD
+    subgraph "1. Data Input"
+        A[config.yaml] --> C(ConfigManager)
+        B[GCS Bucket / Sample Data] --> D(DataLoader)
+    end
+
+    subgraph "2. Core Analysis Engine"
+        C --> E{CUDAnalyzer}
+        D --> E
+        E --> F(SpendAnalyzer)
+        E --> G(SavingsCalculator)
+        E --> H(RiskAssessor)
+        E --> I(RuleBasedPortfolioRecommender)
+        E --> J(AIPortfolioRecommender)
+    end
+
+    subgraph "3. External Services"
+        J --"Generates Prompt"--> K(Gemini API)
+    end
+
+    subgraph "4. Output & Reporting"
+        F --> L(AnalysisResults Model)
+        G --> L
+        H --> L
+        I --> L
+        K --"Returns JSON"--> J --> L
+        L --> M(PDFReportGenerator)
+        L --> N(create_dashboard)
+        M --> O[📄 CFO_Report.pdf]
+        N --> P[📊 Interactive Dashboard]
+    end
+
+    style E fill:#1E3A8A,stroke:#fff,stroke-width:2px,color:#fff
+    style L fill:#10B981,stroke:#fff,stroke-width:2px,color:#fff
+    style K fill:#F59E0B,stroke:#fff,stroke-width:2px,color:#fff
+```
+
 ## ✨ Features
 
 - **📈 Granular Analysis**: 100% coverage of GCP machine types, including GPUs.
 - **🔄 Automated GCS Integration**: Seamlessly loads data from Google Cloud Storage.
 - **🔬 Advanced Analytics**: Portfolio optimization, risk assessment, and forecasting.
 - **📊 Customizable Executive Reporting**: Generate professional PDF reports with configurable themes and company logos.
-- **🤖 AI-Powered Insights with Gemini 2.5 Pro**: Utilize Gemini 2.5 Pro for interactive analysis, including advanced features like **Code Execution** and **URL Context** to query data and external sources with natural language.
+- **🤖 AI-Powered Insights with Gemini**: Utilize Gemini for interactive analysis, including advanced features like **Code Execution** and **URL Context** to query data and external sources with natural language.
 - **⚙️ Zero Configuration Start**: Get started quickly with smart defaults, with deep customization available via a comprehensive `config.yaml`.
 
 ## 🚀 Quick Start
@@ -80,18 +122,33 @@ finops-cli run --config /path/to/your/config.yaml
 
 # Profile a dataset
 finops-cli profile --dataset billing
+
+# Fetch the latest CUD prices from the Google Cloud Billing API
+# Requires CLOUD_BILLING_API_KEY to be set as an environment variable
+export CLOUD_BILLING_API_KEY='your-api-key'
+python3 scripts/fetch_cud_prices.py
 ```
 
 ## 🗂️ Data Structure
 
-Place your billing CSV files in the following GCS structure:
+Place your billing and recommendation CSV files in the following GCS structure. The data loader will read all `.csv` files within these folders.
 
 ```
 gs://your-bucket-name/
 ├── data/billing/           # Billing export CSVs
-├── data/recommendations/   # Cost recommender exports (optional)
+├── data/recommendations/   # Cost recommender exports
 └── data/manual_analysis/   # Manual analysis files (optional)
 ```
+
+### Input File Formats
+
+The application expects the following columns to be present in your CSV files:
+
+| Data Type          | GCS Folder              | Required Columns                        | Notes                                                                                             |
+| :----------------- | :---------------------- | :-------------------------------------- | :------------------------------------------------------------------------------------------------ |
+| **Billing Data**   | `data/billing/`         | `Cost`, and either `SKU` or `Sku Description` | This is the primary input for CUD analysis. Other columns are ignored.                            |
+| **Recommendations**| `data/recommendations/` | `Recommendation`, `Monthly savings`     | This is for Active Assist data. The analyzer sums savings for each unique recommendation type. |
+| **Manual Analysis**| `data/manual_analysis/` | (Flexible)                              | This data is loaded but not currently used in the automated analysis.                             |
 
 ## 📖 Documentation
 

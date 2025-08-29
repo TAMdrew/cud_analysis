@@ -68,6 +68,11 @@ class TestAdvancedCUDOptimizer(unittest.TestCase):
         for allocation in result["optimal_allocation"].values():
             self.assertGreaterEqual(allocation, 0)
 
+    def test_portfolio_optimization_empty_input(self):
+        """Test portfolio optimization with no machine types."""
+        result = self.optimizer.calculate_optimal_portfolio({}, pd.DataFrame())
+        self.assertEqual(result["optimal_allocation"], {})
+
     def test_var_cvar_calculation(self):
         """Test Value at Risk and Conditional Value at Risk"""
         result = self.optimizer.calculate_var_cvar(
@@ -105,6 +110,19 @@ class TestAdvancedCUDOptimizer(unittest.TestCase):
         # Delta should be between 0 and 1
         self.assertGreaterEqual(result["greeks"]["delta"], 0)
         self.assertLessEqual(result["greeks"]["delta"], 1)
+
+    def test_black_scholes_zero_volatility(self):
+        """Test Black-Scholes with zero volatility."""
+        result = self.optimizer.black_scholes_cud_valuation(
+            spot_price=100,
+            strike_price=90,
+            time_to_maturity=1,
+            volatility=0,
+            discount_rate=0.05,
+        )
+        # With zero volatility, the option value is just the discounted intrinsic value
+        expected_value = (100 - 90) * np.exp(-0.05 * 1)
+        self.assertAlmostEqual(result["option_value"], expected_value, places=5)
 
     def test_monte_carlo_simulation(self):
         """Test Monte Carlo simulation for cost projections"""
@@ -179,6 +197,11 @@ class TestCloudEconomicsModeler(unittest.TestCase):
         self.assertGreaterEqual(result_conservative["expected_monthly_savings"], 0)
         self.assertGreaterEqual(result_aggressive["expected_monthly_savings"], 0)
 
+    def test_commitment_ladder_no_forecast(self):
+        """Test commitment ladder with no forecast data."""
+        result = self.modeler.calculate_optimal_commitment_ladder({})
+        self.assertEqual(result, {})
+
 
 class TestQuantitativeRiskAnalyzer(unittest.TestCase):
     """Test suite for Quantitative Risk Analyzer"""
@@ -210,6 +233,17 @@ class TestQuantitativeRiskAnalyzer(unittest.TestCase):
         self.assertIn("coefficient_of_variation", result["metrics"])
         self.assertIn("downside_risk", result["metrics"])
         self.assertIn("underutilization_probability", result["metrics"])
+
+    def test_commitment_risk_score_stable_usage(self):
+        """Test risk score with very stable usage."""
+        stable_usage = pd.Series([100000] * 36)
+        result = self.analyzer.calculate_commitment_risk_score(
+            commitment_amount=95000,
+            historical_usage=stable_usage,
+            commitment_period=36,
+        )
+        self.assertEqual(result["risk_category"], "LOW")
+        self.assertAlmostEqual(result["metrics"]["coefficient_of_variation"], 0)
 
     def test_stress_test_scenarios(self):
         """Test stress testing scenarios"""
@@ -306,6 +340,14 @@ class TestFinancialCalculations(unittest.TestCase):
 
         # IRR should be reasonable (not infinite)
         self.assertLess(metrics.irr, 1.0)  # Less than 100%
+
+    def test_irr_calculation_no_solution(self):
+        """Test IRR calculation with no solution (all negative cash flows)."""
+        optimizer = AdvancedCUDOptimizer()
+        metrics = optimizer.calculate_financial_metrics(
+            initial_investment=1000, cash_flows=[-100, -200]
+        )
+        self.assertTrue(np.isnan(metrics.irr))
 
 
 def run_tests():

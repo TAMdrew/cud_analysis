@@ -5,6 +5,7 @@ import pandas as pd
 
 from finops_analysis_platform.config_manager import ConfigManager
 from finops_analysis_platform.core import CUDAnalyzer
+from finops_analysis_platform.models import PortfolioRecommendation, RiskAssessment
 
 
 class TestCUDAnalyzer(unittest.TestCase):
@@ -30,6 +31,7 @@ class TestCUDAnalyzer(unittest.TestCase):
         self.rule_based_recommender = MagicMock()
         self.ai_recommender = MagicMock()
         self.risk_assessor = MagicMock()
+        self.recommendation_analyzer = MagicMock()
 
         self.analyzer = CUDAnalyzer(
             config_manager=self.config_manager,
@@ -38,6 +40,7 @@ class TestCUDAnalyzer(unittest.TestCase):
             rule_based_recommender=self.rule_based_recommender,
             ai_recommender=self.ai_recommender,
             risk_assessor=self.risk_assessor,
+            recommendation_analyzer=self.recommendation_analyzer,
             billing_data=self.billing_data,
         )
 
@@ -51,17 +54,25 @@ class TestCUDAnalyzer(unittest.TestCase):
             "n1": {"savings_options": {}},
             "e2": {"savings_options": {}},
         }
-        self.rule_based_recommender.recommend_portfolio.return_value = {"layers": []}
-        self.risk_assessor.assess_risk.return_value = {"overall_risk": "LOW"}
+        self.rule_based_recommender.recommend_portfolio.return_value = (
+            PortfolioRecommendation()
+        )
+        self.risk_assessor.assess_risk.return_value = RiskAssessment(
+            overall_risk="LOW", recommendation=""
+        )
         self.ai_recommender.recommend_portfolio.return_value = {"portfolio": []}
+        self.recommendation_analyzer.analyze.return_value = {"Rightsize VM": 123.45}
 
         analysis = self.analyzer.generate_comprehensive_analysis()
 
-        self.assertIn("machine_spend_distribution", analysis)
-        self.assertIn("savings_by_machine", analysis)
-        self.assertIn("portfolio_recommendation", analysis)
-        self.assertIn("risk_assessment", analysis)
-        self.assertIn("ai_portfolio_recommendation", analysis)
+        self.assertIsNotNone(analysis.machine_spend_distribution)
+        self.assertIsNotNone(analysis.savings_by_machine)
+        self.assertIsInstance(
+            analysis.portfolio_recommendation, PortfolioRecommendation
+        )
+        self.assertEqual(analysis.risk_assessment.overall_risk, "LOW")
+        self.assertIsNotNone(analysis.ai_portfolio_recommendation)
+        self.assertIn("Rightsize VM", analysis.active_assist_summary)
 
 
 if __name__ == "__main__":

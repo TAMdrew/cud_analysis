@@ -1,5 +1,6 @@
 import unittest
 
+from finops_analysis_platform.models import RiskAssessment
 from finops_analysis_platform.risk_assessor import RiskAssessor
 
 
@@ -19,8 +20,8 @@ class TestRiskAssessor(unittest.TestCase):
         }
         risk_assessment = self.risk_assessor.assess_risk(savings_by_machine)
 
-        self.assertIn("overall_risk", risk_assessment)
-        self.assertEqual(risk_assessment["overall_risk"], "MEDIUM")
+        self.assertIsInstance(risk_assessment, RiskAssessment)
+        self.assertEqual(risk_assessment.overall_risk, "MEDIUM")
 
 
 if __name__ == "__main__":

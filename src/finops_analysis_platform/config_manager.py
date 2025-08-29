@@ -64,6 +64,24 @@ class ConfigManager:
             self.config = self._get_default_config()
 
         self._override_with_env_vars(self.config)
+        self._infer_gcp_project()
+
+    def _infer_gcp_project(self):
+        """
+        Infers the GCP project ID from standard environment variables if not
+        set in the config.
+        """
+        gcp_config = self.config.setdefault("gcp", {})
+        if "project_id" not in gcp_config or not gcp_config["project_id"]:
+            project_id = os.getenv("GCP_PROJECT_ID") or os.getenv(
+                "GOOGLE_CLOUD_PROJECT"
+            )
+            if project_id:
+                gcp_config["project_id"] = project_id
+                logger.info(
+                    "Inferred GCP Project ID ('%s') from environment variables.",
+                    project_id,
+                )
 
     def _get_default_config(self) -> Dict[str, Any]:
         """Returns minimal default configuration."""

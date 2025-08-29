@@ -1,16 +1,14 @@
-"""Provides a service layer for interacting with the Google Gemini API.
+"""Provides a service layer for interacting with Google's Vertex AI Gemini API.
 
-This module includes functions for client initialization, model selection,
-and content generation. It is designed to work with the google-generativeai
-SDK configured for use with Vertex AI.
+This module uses the official `vertexai` SDK to initialize the client and
+generate content from the Gemini models available on Vertex AI.
 """
 
 import logging
 from typing import List, Optional
 
-import google.generativeai as genai
 from google.api_core import exceptions
-from google.generativeai.types import GenerationConfig, Tool
+from vertexai.generative_models import GenerationConfig, GenerativeModel, Tool
 
 logger = logging.getLogger(__name__)
 
@@ -21,21 +19,23 @@ SIMPLE_MODEL = "gemini-1.5-flash-preview-0514"
 COMPLEX_PROMPT_THRESHOLD = 1500  # characters
 
 
-def initialize_gemini(project_id: str, location: str) -> bool:
-    """Initializes the Gemini client by configuring the SDK for Vertex AI."""
+def initialize_vertex_ai(project_id: str, location: str) -> bool:
+    """Initializes the Vertex AI client."""
     if not project_id:
-        logger.warning("Gemini client not initialized due to missing project_id.")
+        logger.warning("Vertex AI client not initialized due to missing project_id.")
         return False
     try:
-        genai.configure(transport="vertex_ai", project=project_id, location=location)
+        import vertexai
+
+        vertexai.init(project=project_id, location=location)
         logger.info(
-            "Gemini SDK configured for Vertex AI in project '%s' and location '%s'",
+            "Vertex AI SDK initialized for project '%s' and location '%s'",
             project_id,
             location,
         )
         return True
     except (exceptions.GoogleAPICallError, ValueError, ImportError) as e:
-        logger.error("Failed to configure Gemini SDK for Vertex AI: %s", e)
+        logger.error("Failed to initialize Vertex AI SDK: %s", e)
         return False
 
 
@@ -58,9 +58,9 @@ def generate_content(
     prompt: str,
     tools: Optional[List[Tool]] = None,
     model_id: Optional[str] = None,
-) -> Optional[genai.types.GenerateContentResponse]:
+) -> Optional[str]:
     """
-    Generates content using the Gemini API.
+    Generates content using the Vertex AI Gemini API.
 
     Args:
         prompt: The prompt to send to the model.
@@ -68,7 +68,7 @@ def generate_content(
         model_id: The specific model ID to use. If None, one is chosen.
 
     Returns:
-        The response object from the Gemini API, or None on failure.
+        The generated text content as a string, or None on failure.
     """
     if model_id is None:
         model_id = _get_model_for_prompt(prompt)
@@ -77,11 +77,11 @@ def generate_content(
 
     try:
         logger.info("Generating content with model: %s", model_id)
-        model = genai.GenerativeModel(model_id)
+        model = GenerativeModel(model_id)
         response = model.generate_content(
             contents=prompt, generation_config=generation_config, tools=tools
         )
-        return response
+        return response.text
     except (exceptions.GoogleAPICallError, ValueError, TypeError) as e:
-        logger.error("Gemini API call failed: %s", e)
+        logger.error("Vertex AI API call failed: %s", e)
         return None

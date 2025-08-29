@@ -21,6 +21,15 @@ The project is organized as a standard Python package:
     └── ...
 ```
 
+## 🧱 Data Models (`models.py`)
+
+To ensure robustness and clarity, the analysis engine uses a set of strongly-typed data classes to represent its output.
+
+-   **`AnalysisResults`**: The main container for a complete analysis run. It holds all other data models.
+-   **`PortfolioRecommendation`**: Describes the recommended CUD portfolio, including a list of layers and total savings.
+-   **`PortfolioLayer`**: Represents a single recommendation for a specific machine type (e.g., "Commit to 3-Year CUD for N2 machines").
+-   **`RiskAssessment`**: Contains the overall risk level and a breakdown of risk by machine type.
+
 ## 🧩 Core Modules
 
 ### `config_manager.py`
@@ -48,7 +57,7 @@ Generates professional PDF reports and interactive dashboards. The `generate_rep
 
 The Gemini service has been significantly enhanced for cost, performance, and robustness.
 
-- **`_get_model_for_prompt(prompt)`**: Dynamically selects a cost-effective model (`gemini-2.5-pro` or `gemini-2.5-flash`) based on prompt complexity.
+- **`_get_model_for_prompt(prompt)`**: Dynamically selects a cost-effective model (`gemini-1.5-pro` or `gemini-1.5-flash`) based on prompt complexity.
 - **`create_cached_content_from_df(client, model, df)`**: Creates a context cache from a pandas DataFrame to reduce cost and latency on repeated queries.
 - **`generate_content(...)`**: Now includes robust error handling and can leverage a context cache.
 

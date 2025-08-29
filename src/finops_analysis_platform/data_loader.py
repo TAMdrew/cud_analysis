@@ -106,22 +106,6 @@ def generate_sample_billing_data(rows: int = 1000) -> pd.DataFrame:
     return dataframe
 
 
-def generate_sample_recommendations_data(rows: int = 50) -> pd.DataFrame:
-    """Generates a DataFrame with sample recommendations data."""
-    data = {
-        "Resource": [f"instance-{i}" for i in range(rows)],
-        "Type": np.random.choice(
-            ["Idle VM", "Rightsizing", "Unattached Disk", "Snapshot"], rows
-        ),
-        "Monthly savings": np.random.uniform(50, 2000, rows),
-        "Recommendation": np.random.choice(
-            ["Delete", "Resize", "Snapshot and Delete"], rows
-        ),
-        "Impact": np.random.choice(["Low", "Medium", "High"], rows),
-    }
-    return pd.DataFrame(data)
-
-
 def generate_sample_manual_analysis_data(rows: int = 100) -> pd.DataFrame:
     """Generates a DataFrame with sample manual analysis data."""
     data = {
@@ -314,7 +298,6 @@ class SampleDataLoader(DataLoader):
         logger.info("Generating sample data sets for demonstration purposes.")
         return {
             "billing": generate_sample_billing_data(),
-            "recommendations": generate_sample_recommendations_data(),
             "manual_analysis": generate_sample_manual_analysis_data(),
             "sample_data": True,
         }

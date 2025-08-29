@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Any, Dict, Protocol, cast
 
 from .config_manager import ConfigManager
-from .gemini_service import generate_content, initialize_gemini
+from .gemini_service import generate_content, initialize_vertex_ai
+from .models import PortfolioLayer, PortfolioRecommendation
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,9 @@ logger = logging.getLogger(__name__)
 class PortfolioRecommender(Protocol):
     """Protocol for portfolio recommenders."""
 
-    def recommend_portfolio(self, savings_by_machine: Dict) -> Dict[str, Any]:
+    def recommend_portfolio(
+        self, savings_by_machine: Dict
+    ) -> PortfolioRecommendation | Dict:
         """Recommends a CUD portfolio."""
         ...
 
@@ -23,7 +26,7 @@ class PortfolioRecommender(Protocol):
 class RuleBasedPortfolioRecommender(PortfolioRecommender):
     """Generates a simple, rule-based portfolio recommendation."""
 
-    def recommend_portfolio(self, savings_by_machine: Dict) -> Dict[str, Any]:
+    def recommend_portfolio(self, savings_by_machine: Dict) -> PortfolioRecommendation:
         """Generates a simple, rule-based portfolio recommendation."""
         layers = []
         for machine_type, savings in savings_by_machine.items():
@@ -36,26 +39,24 @@ class RuleBasedPortfolioRecommender(PortfolioRecommender):
             )
             if current_options[best_option]["monthly_savings"] > 0:
                 layers.append(
-                    {
-                        "machine_type": machine_type,
-                        "strategy": best_option,
-                        "monthly_spend": savings["stable_workload"],
-                        "monthly_savings": current_options[best_option][
-                            "monthly_savings"
-                        ],
-                    }
+                    PortfolioLayer(
+                        machine_type=machine_type,
+                        strategy=best_option,
+                        monthly_spend=savings["stable_workload"],
+                        monthly_savings=current_options[best_option]["monthly_savings"],
+                    )
                 )
 
-        total_savings = sum(layer["monthly_savings"] for layer in layers)
+        total_savings = sum(layer.monthly_savings for layer in layers)
         total_spend = sum(s["monthly_spend"] for s in savings_by_machine.values())
 
         coverage = (total_savings / total_spend * 100) if total_spend > 0 else 0
-        return {
-            "layers": sorted(layers, key=lambda x: x["monthly_savings"], reverse=True),
-            "total_monthly_savings": total_savings,
-            "total_annual_savings": total_savings * 12,
-            "coverage_percentage": coverage,
-        }
+        return PortfolioRecommendation(
+            layers=sorted(layers, key=lambda x: x.monthly_savings, reverse=True),
+            total_monthly_savings=total_savings,
+            total_annual_savings=total_savings * 12,
+            coverage_percentage=coverage,
+        )
 
 
 class AIPortfolioRecommender(PortfolioRecommender):
@@ -70,7 +71,7 @@ class AIPortfolioRecommender(PortfolioRecommender):
         project_id = self.config_manager.get("gcp.project_id")
         location = self.config_manager.get("gcp.location", "us-central1")
         if project_id and self._is_valid_project_id(project_id):
-            return initialize_gemini(project_id=project_id, location=location)
+            return initialize_vertex_ai(project_id=project_id, location=location)
         logger.warning(
             "Gemini client not initialized due to missing or invalid project_id."
         )
@@ -79,7 +80,7 @@ class AIPortfolioRecommender(PortfolioRecommender):
     def _is_valid_project_id(self, project_id: str) -> bool:
         """Validates GCP project ID format."""
         # GCP project IDs must be 6-30 characters, lowercase letters, digits, hyphens
-        pattern = r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+        pattern = r"^[a-z][a-z0-9-]{4,28}[a-z0-nines]$"
         return bool(re.match(pattern, project_id))
 
     def recommend_portfolio(self, savings_by_machine: Dict) -> Dict[str, Any]:
@@ -108,15 +109,15 @@ class AIPortfolioRecommender(PortfolioRecommender):
         logger.info(
             "Generating AI CUD portfolio for risk tolerance: %s", risk_tolerance
         )
-        response = generate_content(prompt)
+        response_text = generate_content(prompt)
 
-        if not (response and response.text):
+        if not response_text:
             return {"error": "No response from AI for portfolio optimization."}
         try:
-            return json.loads(response.text)
+            return json.loads(response_text)
         except json.JSONDecodeError:
             logger.error("Failed to decode Gemini's portfolio recommendation.")
             return {
                 "error": "Failed to parse AI response.",
-                "raw_response": response.text,
+                "raw_response": response_text,
             }
