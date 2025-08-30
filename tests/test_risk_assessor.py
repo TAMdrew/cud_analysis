@@ -1,5 +1,6 @@
 import unittest
 
+from finops_analysis_platform.models import RiskAssessment
 from finops_analysis_platform.risk_assessor import RiskAssessor
 
 
@@ -19,8 +20,33 @@ class TestRiskAssessor(unittest.TestCase):
         }
         risk_assessment = self.risk_assessor.assess_risk(savings_by_machine)
 
-        self.assertIn("overall_risk", risk_assessment)
-        self.assertEqual(risk_assessment["overall_risk"], "MEDIUM")
+        self.assertIsInstance(risk_assessment, RiskAssessment)
+        self.assertEqual(risk_assessment.overall_risk, "MEDIUM")
+
+    def test_assess_risk_low(self):
+        """Test the risk assessment logic for a low-risk outcome."""
+        savings_by_machine = {
+            "n1": {"monthly_spend": 300},
+            "e2": {"monthly_spend": 50},
+            "c2": {"monthly_spend": 100},
+        }
+        risk_assessment = self.risk_assessor.assess_risk(savings_by_machine)
+        self.assertEqual(risk_assessment.overall_risk, "LOW")
+
+    def test_assess_risk_high(self):
+        """Test the risk assessment logic for a high-risk outcome."""
+        savings_by_machine = {
+            "n1": {"monthly_spend": 100},
+            "gpu": {"monthly_spend": 300},
+            "a2": {"monthly_spend": 100},
+        }
+        risk_assessment = self.risk_assessor.assess_risk(savings_by_machine)
+        self.assertEqual(risk_assessment.overall_risk, "HIGH")
+
+    def test_assess_risk_no_data(self):
+        """Test the risk assessment with no input data."""
+        risk_assessment = self.risk_assessor.assess_risk({})
+        self.assertEqual(risk_assessment.overall_risk, "UNKNOWN")
 
 
 if __name__ == "__main__":

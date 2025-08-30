@@ -200,6 +200,25 @@ class AdvancedCUDOptimizer:
         discount_rate: float,
     ) -> Dict[str, Any]:
         """Applies Black-Scholes model to value a CUD as a call option."""
+        if volatility == 0:
+            # Handle the zero volatility case to avoid division by zero
+            intrinsic_value = max(spot_price - strike_price, 0)
+            option_value = intrinsic_value * np.exp(-discount_rate * time_to_maturity)
+            return {
+                "option_value": option_value,
+                "intrinsic_value": intrinsic_value,
+                "time_value": 0,
+                "greeks": {
+                    "delta": 1 if spot_price > strike_price else 0,
+                    "gamma": 0,
+                    "theta": 0,
+                    "vega": 0,
+                    "rho": 0,
+                },
+                "break_even_utilization": strike_price / spot_price,
+                "implied_volatility_target": 0,
+            }
+
         d1 = (
             np.log(spot_price / strike_price)
             + (discount_rate + 0.5 * volatility**2) * time_to_maturity

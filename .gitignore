@@ -334,3 +334,5 @@ budgets/
 # Allow specific archives if needed
 !releases/*.zip
 !dist/*.tar.gz
+\n# Sample data files
+samples_csv/

@@ -1,9 +1,8 @@
-"""Handles loading data from GCS and generating sample data.
+"""Handles loading data from Google Cloud Storage and local samples.
 
-This module provides the GCSDataLoader class which is responsible for
-authenticating with Google Cloud Storage and loading billing, recommendations,
-and other data files. If GCS access fails, it falls back to generating
-realistic sample data for demonstration purposes.
+This module provides data loaders responsible for fetching billing,
+recommendations, and other data files from GCS. If GCS is unavailable, it
+falls back to loading local sample data for demonstration purposes.
 """
 
 from __future__ import annotations
@@ -11,7 +10,6 @@ from __future__ import annotations
 import io
 import logging
 import os
-import random
 from pathlib import Path
 from typing import Dict, Union
 
@@ -29,27 +27,19 @@ logger = logging.getLogger(__name__)
 # --- Sample Data Generation Functions ---
 
 
-def _generate_realistic_cost(usage: float, sku: str) -> float:
-    """Generates a realistic cost based on usage and SKU."""
-    base_cost_per_hour = {
-        "n2": 0.1,
-        "e2": 0.05,
-        "c2": 0.15,
-        "m1": 0.5,
-        "t2": 0.08,
-        "a2": 1.2,
-        "gpu": 2.5,
-    }
-    sku_family = sku.split("-")[0]
-    cost_multiplier = base_cost_per_hour.get(sku_family, 0.1)
-    return usage * cost_multiplier * (1 + random.uniform(-0.1, 0.1))
-
-
 def _generate_realistic_cost_vectorized(
     usage_series: pd.Series,
     sku_series: pd.Series,
 ) -> pd.Series:
-    """Vectorized cost generation for better performance."""
+    """Generates a realistic cost based on usage and SKU in a vectorized way.
+
+    Args:
+        usage_series: A pandas Series containing usage amounts.
+        sku_series: A pandas Series containing SKU descriptions.
+
+    Returns:
+        A pandas Series with the calculated costs.
+    """
     base_costs = {
         "n2": 0.1,
         "e2": 0.05,
@@ -59,21 +49,21 @@ def _generate_realistic_cost_vectorized(
         "a2": 1.2,
         "gpu": 2.5,
     }
-
-    # Extract SKU families
     sku_families = sku_series.str.split("-").str[0]
-
-    # Map to cost multipliers
     cost_multipliers = sku_families.map(base_costs).fillna(0.1)
-
-    # Generate random variations
     random_factors = 1 + np.random.uniform(-0.1, 0.1, len(usage_series))
-
     return usage_series * cost_multipliers * random_factors
 
 
 def generate_sample_billing_data(rows: int = 1000) -> pd.DataFrame:
-    """Generates a DataFrame with realistic sample billing data."""
+    """Generates a DataFrame with realistic sample billing data.
+
+    Args:
+        rows: The number of sample rows to generate.
+
+    Returns:
+        A pandas DataFrame with sample billing data.
+    """
     machine_types = [
         "n2-standard-8",
         "n2-highmem-4",
@@ -107,23 +97,38 @@ def generate_sample_billing_data(rows: int = 1000) -> pd.DataFrame:
 
 
 def generate_sample_recommendations_data(rows: int = 50) -> pd.DataFrame:
-    """Generates a DataFrame with sample recommendations data."""
+    """Generates a DataFrame with sample recommendations data.
+
+    Args:
+        rows: The number of sample rows to generate.
+
+    Returns:
+        A pandas DataFrame with sample recommendations data.
+    """
+    recommendation_types = [
+        "Rightsize VM",
+        "Shut down Idle VM",
+        "Delete idle disk",
+        "Delete idle IP address",
+    ]
     data = {
         "Resource": [f"instance-{i}" for i in range(rows)],
-        "Type": np.random.choice(
-            ["Idle VM", "Rightsizing", "Unattached Disk", "Snapshot"], rows
-        ),
-        "Monthly savings": np.random.uniform(50, 2000, rows),
-        "Recommendation": np.random.choice(
-            ["Delete", "Resize", "Snapshot and Delete"], rows
-        ),
+        "Recommendation": np.random.choice(recommendation_types, rows),
+        "Monthly savings": np.random.uniform(5, 500, rows),
         "Impact": np.random.choice(["Low", "Medium", "High"], rows),
     }
     return pd.DataFrame(data)
 
 
 def generate_sample_manual_analysis_data(rows: int = 100) -> pd.DataFrame:
-    """Generates a DataFrame with sample manual analysis data."""
+    """Generates a DataFrame with sample manual analysis data.
+
+    Args:
+        rows: The number of sample rows to generate.
+
+    Returns:
+        A pandas DataFrame with sample manual analysis data.
+    """
     data = {
         "Sku Id": [f"sku-{i}" for i in range(rows)],
         "Sku Description": np.random.choice(["n2-standard-4", "e2-medium"], rows),
@@ -137,7 +142,7 @@ def generate_sample_manual_analysis_data(rows: int = 100) -> pd.DataFrame:
 
 
 def generate_sample_spend_distribution() -> Dict[str, float]:
-    """Generate a sample spend distribution by machine type."""
+    """Generates a sample spend distribution by machine type."""
     return {
         "n2": 250000,
         "n1": 180000,
@@ -158,7 +163,7 @@ def generate_sample_spend_distribution() -> Dict[str, float]:
 
 
 class GCSDataLoader(DataLoader):
-    """Loads data from a structured GCS bucket."""
+    """Loads data from a structured Google Cloud Storage bucket."""
 
     GCS_STRUCTURE = {
         "billing": "data/billing/",
@@ -167,6 +172,11 @@ class GCSDataLoader(DataLoader):
     }
 
     def __init__(self, bucket_name: str):
+        """Initializes the GCSDataLoader.
+
+        Args:
+            bucket_name: The name of the GCS bucket to load data from.
+        """
         self.bucket_name = bucket_name
         self.storage_client = self._initialize_client()
 
@@ -178,8 +188,8 @@ class GCSDataLoader(DataLoader):
             return storage.Client(credentials=credentials, project=project)
         except DefaultCredentialsError:
             logger.warning(
-                "Google Cloud authentication failed. Could not find default credentials. "
-                "Proceeding with sample data generation as fallback."
+                "Google Cloud authentication failed. Could not find default "
+                "credentials. Proceeding with sample data as fallback."
             )
             return None
         except (google.api_core.exceptions.GoogleAPICallError, OSError) as exception:
@@ -189,9 +199,12 @@ class GCSDataLoader(DataLoader):
             return None
 
     def load_all_data(self) -> Dict[str, Union[pd.DataFrame, bool]]:
-        """
-        Loads all CSV files from the GCS bucket.
+        """Loads all CSV files from the GCS bucket.
+
         If GCS access fails, it falls back to generating sample data.
+
+        Returns:
+            A dictionary containing pandas DataFrames for each data type.
         """
         if not self.storage_client:
             return SampleDataLoader().load_all_data()
@@ -199,8 +212,10 @@ class GCSDataLoader(DataLoader):
         logger.info("Starting data load from GCS bucket: gs://%s", self.bucket_name)
         data_frames = self._load_data_from_gcs()
 
-        if not data_frames:
-            logger.warning("No data loaded from GCS. Falling back to sample data.")
+        if not data_frames.get("billing"):
+            logger.warning(
+                "No billing data loaded from GCS. Falling back to sample data."
+            )
             return SampleDataLoader().load_all_data()
 
         self._log_summary(data_frames)
@@ -231,7 +246,6 @@ class GCSDataLoader(DataLoader):
                     if blob.name.endswith(".csv")
                 ]
 
-                # Filter out None values before concatenating
                 valid_dataframes = [df for df in dataframe_list if df is not None]
                 if valid_dataframes:
                     data_frames[data_type] = pd.concat(
@@ -281,12 +295,19 @@ class GCSDataLoader(DataLoader):
         logger.info("\n".join(summary_lines))
 
     def save_report_to_gcs(self, filename: str, local_path: str) -> bool:
-        """Saves a generated report to the GCS reports path."""
+        """Saves a generated report to the GCS reports path.
+
+        Args:
+            filename: The desired filename for the report in GCS.
+            local_path: The local path to the file to be uploaded.
+
+        Returns:
+            True if the upload was successful, False otherwise.
+        """
         if not self.storage_client:
             logger.warning("GCS client not available. Report saved locally only.")
             return False
 
-        # Sanitize filename to prevent path traversal
         safe_filename = os.path.basename(filename)
         if safe_filename != filename:
             logger.warning("Invalid filename detected: %s", filename)
@@ -294,7 +315,6 @@ class GCSDataLoader(DataLoader):
 
         try:
             reports_path = "reports/cfo_dashboard"
-            # Use Path for safe path joining
             blob_path = str(Path(reports_path) / safe_filename)
             bucket = self.storage_client.bucket(self.bucket_name)
             blob = bucket.blob(blob_path)
@@ -310,7 +330,11 @@ class SampleDataLoader(DataLoader):
     """Generates sample data for demonstration purposes."""
 
     def load_all_data(self) -> Dict[str, Union[pd.DataFrame, bool]]:
-        """Generates a dictionary of sample data for demonstration."""
+        """Generates a dictionary of sample data for demonstration.
+
+        Returns:
+            A dictionary containing sample pandas DataFrames.
+        """
         logger.info("Generating sample data sets for demonstration purposes.")
         return {
             "billing": generate_sample_billing_data(),
@@ -321,7 +345,14 @@ class SampleDataLoader(DataLoader):
 
 
 def get_data_loader(config_manager: ConfigManager) -> DataLoader:
-    """Factory function to get the appropriate data loader."""
+    """Factory function to get the appropriate data loader.
+
+    Args:
+        config_manager: The application's configuration manager.
+
+    Returns:
+        An initialized data loader, either for GCS or for sample data.
+    """
     if config_manager.get("gcp.bucket_name"):
         return GCSDataLoader(bucket_name=config_manager.get("gcp.bucket_name"))
     return SampleDataLoader()
@@ -330,8 +361,7 @@ def get_data_loader(config_manager: ConfigManager) -> DataLoader:
 def load_data_from_config(
     config_manager: ConfigManager,
 ) -> Dict[str, Union[pd.DataFrame, bool]]:
-    """
-    Loads all datasets from GCS based on the application configuration.
+    """Loads all datasets based on the application configuration.
 
     Args:
         config_manager: An instance of ConfigManager.

@@ -7,7 +7,7 @@ professional PDF reports for CUD analysis, suitable for executive presentation.
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -27,11 +27,12 @@ from reportlab.platypus import (
 )
 
 from .config_manager import ConfigManager
+from .models import AnalysisResults
 
 logger = logging.getLogger(__name__)
 
 
-def create_dashboard(analysis: Dict[str, Any], config_manager: ConfigManager):
+def create_dashboard(analysis: AnalysisResults, config_manager: ConfigManager):
     """Creates an interactive Plotly dashboard for CUD analysis."""
     theme = config_manager.get(
         "reporting.theme_colors",
@@ -57,34 +58,18 @@ def create_dashboard(analysis: Dict[str, Any], config_manager: ConfigManager):
     )
 
     # 1. Savings by Strategy
-    savings_summary = analysis["total_savings_summary"]
-    strategies = [
-        "1-Yr Resource",
-        "3-Yr Resource",
-        "1-Yr Flex",
-        "3-Yr Flex",
-        "Optimal Mix",
-    ]
-    savings = [
-        savings_summary.get("1_year_resource", 0),
-        savings_summary.get("3_year_resource", 0),
-        savings_summary.get("1_year_flex", 0),
-        savings_summary.get("3_year_flex", 0),
-        savings_summary.get("optimal_mix", 0),
-    ]
+    # This part needs to be adapted as total_savings_summary is not in the model
+    # For now, we will use the portfolio recommendation total savings
+    savings_summary = analysis.portfolio_recommendation.total_monthly_savings
+    strategies = ["Optimal Mix (Rule-Based)"]
+    savings = [savings_summary]
     fig.add_trace(
         go.Bar(
             x=strategies,
             y=savings,
             text=[f"${s:,.0f}" for s in savings],
             textposition="auto",
-            marker_color=[
-                theme["primary"],
-                theme["secondary"],
-                theme["success"],
-                theme["accent"],
-                theme["danger"],
-            ],
+            marker_color=[theme["danger"]],
         ),
         row=1,
         col=1,
@@ -92,7 +77,7 @@ def create_dashboard(analysis: Dict[str, Any], config_manager: ConfigManager):
 
     # 2. Machine Spend Distribution
     top_machines = sorted(
-        analysis["machine_spend_distribution"].items(), key=lambda x: x[1], reverse=True
+        analysis.machine_spend_distribution.items(), key=lambda x: x[1], reverse=True
     )[:8]
     fig.add_trace(
         go.Pie(
@@ -105,7 +90,7 @@ def create_dashboard(analysis: Dict[str, Any], config_manager: ConfigManager):
     )
 
     # 3. Risk Distribution
-    risk_dist = analysis["risk_assessment"]["risk_distribution"]
+    risk_dist = analysis.risk_assessment.risk_distribution
     risk_values = [
         risk_dist.get("low", 0),
         risk_dist.get("medium", 0),
@@ -122,11 +107,11 @@ def create_dashboard(analysis: Dict[str, Any], config_manager: ConfigManager):
     )
 
     # 4. Top Savings Opportunities
-    portfolio_layers = analysis["portfolio_recommendation"]["layers"][:10]
-    savings_values = [layer["monthly_savings"] for layer in portfolio_layers]
+    portfolio_layers = analysis.portfolio_recommendation.layers[:10]
+    savings_values = [layer.monthly_savings for layer in portfolio_layers]
     fig.add_trace(
         go.Bar(
-            x=[layer["machine_type"].upper() for layer in portfolio_layers],
+            x=[layer.machine_type.upper() for layer in portfolio_layers],
             y=savings_values,
             text=[f"${s:,.0f}" for s in savings_values],
             textposition="auto",
@@ -190,20 +175,20 @@ class PDFReportGenerator:
         )
 
     def generate_report(
-        self, analysis: Dict[str, Any], filename: Optional[str] = None
+        self, analysis: AnalysisResults, filename: Optional[str] = None
     ) -> str:
         """
         Generates a comprehensive, multi-page PDF report.
 
         Args:
-            analysis: The analysis results dictionary.
+            analysis: The analysis results object.
             filename: The desired filename for the report. If None, a default
                       is used.
 
         Returns:
             The filename of the generated report.
         """
-        if filename is None:
+        if not filename:
             filename = f"CFO_CUD_Report_{datetime.now().strftime('%Y%m%d')}.pdf"
 
         doc = SimpleDocTemplate(filename, pagesize=letter)
@@ -214,6 +199,7 @@ class PDFReportGenerator:
         story.append(PageBreak())
         self._build_portfolio_recommendation(story, analysis)
         story.append(PageBreak())
+        self._build_active_assist_recommendations(story, analysis)
         self._build_risk_assessment(story, analysis)
         self._build_next_steps(story)
 
@@ -243,20 +229,23 @@ class PDFReportGenerator:
             )
         )
 
-    def _build_executive_summary(self, story: List[Any], analysis: Dict[str, Any]):
+    def _build_executive_summary(self, story: List[Any], analysis: AnalysisResults):
         """Builds the executive summary section with a key metrics table."""
         story.append(Paragraph("Executive Summary", self.styles["SectionHeader"]))
-        total_spend = sum(analysis["machine_spend_distribution"].values())
-        optimal_savings = analysis["total_savings_summary"]["optimal_mix"]
+        total_spend = sum(analysis.machine_spend_distribution.values())
+        optimal_savings = analysis.portfolio_recommendation.total_monthly_savings
         savings_pct = (optimal_savings / total_spend * 100) if total_spend > 0 else 0
 
         data = [
             ["Metric", "Value"],
             ["Total Monthly Spend Analyzed", f"${total_spend:,.2f}"],
             ["Optimal Monthly Savings", f"${optimal_savings:,.2f}"],
-            ["Annual Savings Potential", f"${optimal_savings * 12:,.2f}"],
+            [
+                "Annual Savings Potential",
+                f"${analysis.portfolio_recommendation.total_annual_savings:,.2f}",
+            ],
             ["Effective Blended Discount", f"{savings_pct:.1f}%"],
-            ["Overall Risk Assessment", analysis["risk_assessment"]["overall_risk"]],
+            ["Overall Risk Assessment", analysis.risk_assessment.overall_risk],
         ]
         table = Table(data, colWidths=[200, 200])
         table.setStyle(
@@ -280,22 +269,22 @@ class PDFReportGenerator:
         story.append(table)
 
     def _build_portfolio_recommendation(
-        self, story: List[Any], analysis: Dict[str, Any]
+        self, story: List[Any], analysis: AnalysisResults
     ):
         """Builds the top recommendations table."""
         story.append(
             Paragraph("Top Portfolio Recommendations", self.styles["SectionHeader"])
         )
-        top_layers = analysis["portfolio_recommendation"]["layers"][:10]
+        top_layers = analysis.portfolio_recommendation.layers[:10]
 
         data = [["Machine Type", "Strategy", "Committed Spend", "Monthly Savings"]]
         for layer in top_layers:
             data.append(
                 [
-                    layer["machine_type"].upper(),
-                    layer["strategy"].replace("_", " ").title(),
-                    f"${layer['monthly_spend']:,.2f}",
-                    f"${layer['monthly_savings']:,.2f}",
+                    layer.machine_type.upper(),
+                    layer.strategy.replace("_", " ").title(),
+                    f"${layer.monthly_spend:,.2f}",
+                    f"${layer.monthly_savings:,.2f}",
                 ]
             )
         table = Table(data, colWidths=[100, 150, 120, 120])
@@ -319,19 +308,71 @@ class PDFReportGenerator:
         )
         story.append(table)
 
-    def _build_risk_assessment(self, story: List[Any], analysis: Dict[str, Any]):
+    def _build_active_assist_recommendations(
+        self, story: List[Any], analysis: AnalysisResults
+    ):
+        """Builds the Active Assist recommendations table."""
+        story.append(
+            Paragraph(
+                "Active Assist Cost Recommendations", self.styles["SectionHeader"]
+            )
+        )
+        if not analysis.active_assist_summary:
+            story.append(
+                Paragraph(
+                    "No Active Assist recommendation data was found or analyzed.",
+                    self.styles["NormalLeft"],
+                )
+            )
+            return
+
+        data = [["Recommendation Type", "Potential Monthly Savings"]]
+        total_savings = 0.0
+        for rec_type, savings in sorted(
+            analysis.active_assist_summary.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        ):
+            data.append([rec_type, f"${savings:,.2f}"])
+            total_savings += savings
+
+        data.append(["Total", f"${total_savings:,.2f}"])
+
+        table = Table(data, colWidths=[300, 150])
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), HexColor(self.theme["accent"])),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesoke),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                    (
+                        "BACKGROUND",
+                        (0, 1),
+                        (-1, -2),
+                        HexColor(self.theme["background"]),
+                    ),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                ]
+            )
+        )
+        story.append(table)
+        story.append(PageBreak())
+
+    def _build_risk_assessment(self, story: List[Any], analysis: AnalysisResults):
         """Builds the risk assessment section."""
         story.append(Paragraph("Risk Assessment", self.styles["SectionHeader"]))
         story.append(
             Paragraph(
-                f"<b>Overall Risk:</b> {analysis['risk_assessment']['overall_risk']}",
+                f"<b>Overall Risk:</b> {analysis.risk_assessment.overall_risk}",
                 self.styles["NormalLeft"],
             )
         )
         story.append(
             Paragraph(
-                f"<b>Recommendation:</b> "
-                f"{analysis['risk_assessment']['recommendation']}",
+                f"<b>Recommendation:</b> " f"{analysis.risk_assessment.recommendation}",
                 self.styles["NormalLeft"],
             )
         )

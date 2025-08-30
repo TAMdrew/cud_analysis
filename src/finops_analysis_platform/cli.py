@@ -12,6 +12,7 @@ from .data_loader import get_data_loader
 from .discount_mapping import MachineTypeDiscountMapping
 from .portfolio_recommender import AIPortfolioRecommender, RuleBasedPortfolioRecommender
 from .profiler import create_profile_report
+from .recommendation_analyzer import RecommendationAnalyzer
 from .reporting import PDFReportGenerator, create_dashboard
 from .risk_assessor import RiskAssessor
 from .savings_calculator import SavingsCalculator
@@ -37,6 +38,7 @@ def run(config):
     loader = get_data_loader(config_manager)
     data = loader.load_all_data()
     billing_data = data.get("billing")
+    recommendations_data = data.get("recommendations")
 
     # Initialize components
     discount_mapping = MachineTypeDiscountMapping()
@@ -45,6 +47,7 @@ def run(config):
     rule_based_recommender = RuleBasedPortfolioRecommender()
     ai_recommender = AIPortfolioRecommender(config_manager)
     risk_assessor = RiskAssessor()
+    recommendation_analyzer = RecommendationAnalyzer()
 
     # Run analysis
     analyzer = CUDAnalyzer(
@@ -54,7 +57,9 @@ def run(config):
         rule_based_recommender=rule_based_recommender,
         ai_recommender=ai_recommender,
         risk_assessor=risk_assessor,
+        recommendation_analyzer=recommendation_analyzer,
         billing_data=billing_data,
+        recommendations_data=recommendations_data,
     )
     analysis = analyzer.generate_comprehensive_analysis()
     click.echo("✅ Analysis complete!")
@@ -75,7 +80,8 @@ def run(config):
 
     # Create dashboard
     if config_manager.get("reporting", {}).get("create_dashboard", False):
-        create_dashboard(analysis, config_manager=config_manager)
+        dashboard_fig = create_dashboard(analysis, config_manager=config_manager)
+        dashboard_fig.show()  # Open dashboard in a browser
         click.echo("📊 Dashboard created.")
 
     click.echo("🎉 FinOps CUD Analysis finished successfully!")

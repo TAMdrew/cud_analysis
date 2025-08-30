@@ -1,4 +1,4 @@
-"""Manages loading and accessing configuration from YAML files and env vars.
+"""Manages loading and accessing configuration for the application.
 
 This module provides a ConfigManager class that loads configuration from a
 YAML file and allows for overrides from environment variables, providing a
@@ -18,21 +18,25 @@ logger = logging.getLogger(__name__)
 
 
 class ConfigManager:
-    """
-    A robust class to manage configuration for the FinOps analysis platform.
-    It loads from a YAML file and allows overrides from environment variables.
+    """Manages loading and accessing of application configuration.
+
+    This class loads settings from a YAML file and merges them with settings
+    from a .env file and environment variables, with environment variables
+    taking the highest precedence.
+
+    Attributes:
+        config: A dictionary holding the final, merged configuration.
     """
 
     def __init__(
         self, config_path: str = "config.yaml", env_path: Optional[str] = ".env"
     ):
-        """
-        Initialize the ConfigManager.
+        """Initializes the ConfigManager and loads configuration.
 
         Args:
             config_path: The path to the YAML configuration file.
-            env_path: The path to the .env file. If None, .env file is not
-                      loaded.
+            env_path: The path to the .env file. If None, the .env file is not
+                loaded.
         """
         self.config_path = Path(config_path)
         self.env_path = Path(env_path) if env_path else None
@@ -40,9 +44,7 @@ class ConfigManager:
         self._load_config()
 
     def _load_config(self):
-        """
-        Load configuration from YAML and override with environment variables.
-        """
+        """Loads configuration from YAML and overrides with environment variables."""
         if self.env_path and self.env_path.is_file():
             load_dotenv(dotenv_path=self.env_path)
             logger.info("Loaded environment variables from %s", self.env_path)
@@ -64,9 +66,24 @@ class ConfigManager:
             self.config = self._get_default_config()
 
         self._override_with_env_vars(self.config)
+        self._infer_gcp_project()
+
+    def _infer_gcp_project(self):
+        """Infers GCP project ID from standard env vars if not set."""
+        gcp_config = self.config.setdefault("gcp", {})
+        if "project_id" not in gcp_config or not gcp_config["project_id"]:
+            project_id = os.getenv("GCP_PROJECT_ID") or os.getenv(
+                "GOOGLE_CLOUD_PROJECT"
+            )
+            if project_id:
+                gcp_config["project_id"] = project_id
+                logger.info(
+                    "Inferred GCP Project ID ('%s') from environment variables.",
+                    project_id,
+                )
 
     def _get_default_config(self) -> Dict[str, Any]:
-        """Returns minimal default configuration."""
+        """Returns a minimal default configuration."""
         return {
             "gcp": {"location": "us-central1"},
             "analysis": {"risk_tolerance": "medium"},
@@ -74,10 +91,14 @@ class ConfigManager:
         }
 
     def _override_with_env_vars(self, config_dict: Dict[str, Any], prefix: str = ""):
-        """
-        Recursively override configuration with environment variables.
-        Example: config {'gcp': {'project_id': 'x'}} looks for env var
-        GCP_PROJECT_ID.
+        """Recursively overrides dictionary values with environment variables.
+
+        Example: A config {'gcp': {'project_id': 'x'}} will look for an
+        environment variable named GCP_PROJECT_ID.
+
+        Args:
+            config_dict: The dictionary to override.
+            prefix: The prefix to use for constructing the env var name.
         """
         for key, value in config_dict.items():
             if isinstance(value, dict):
@@ -119,15 +140,14 @@ class ConfigManager:
                         )
 
     def get(self, key: str, default: Any = None) -> Any:
-        """
-        Get a configuration value using dot notation for nested keys.
+        """Gets a configuration value using dot notation for nested keys.
 
         Args:
             key: The configuration key to retrieve (e.g., 'gcp.project_id').
             default: The default value to return if the key is not found.
 
         Returns:
-            The configuration value.
+            The requested configuration value or the default.
         """
         keys = key.split(".")
         value = self.config
@@ -139,14 +159,22 @@ class ConfigManager:
         return value
 
     def __getitem__(self, key: str) -> Any:
-        """
-        Get a configuration value using dictionary-style access.
-        Does not support dot notation. Raises KeyError if key is not found.
+        """Gets a configuration value using dictionary-style access.
+
+        Note:
+            This method does not support dot notation for nested keys.
+
+        Args:
+            key: The top-level configuration key to retrieve.
+
+        Returns:
+            The requested configuration value.
+
+        Raises:
+            KeyError: If the key is not found in the configuration.
         """
         return self.config[key]
 
     def __repr__(self) -> str:
-        """
-        Return a string representation of the ConfigManager instance.
-        """
+        """Returns a string representation of the ConfigManager instance."""
         return f"ConfigManager(config_path='{self.config_path}')"

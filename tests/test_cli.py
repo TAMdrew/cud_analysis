@@ -5,22 +5,37 @@ from unittest.mock import patch
 from click.testing import CliRunner
 
 from finops_analysis_platform.cli import main
+from finops_analysis_platform.data_loader import SampleDataLoader
 
 
 def test_run_command_executes_successfully():
     """Test that the 'run' command executes without errors."""
     runner = CliRunner()
-    with patch("finops_analysis_platform.cli.PDFReportGenerator") as mock_pdf_generator:
-        # Configure the mock to avoid issues with method calls on the instance
+    with (
+        patch("finops_analysis_platform.cli.PDFReportGenerator") as mock_pdf_generator,
+        patch(
+            "finops_analysis_platform.cli.AIPortfolioRecommender"
+        ) as mock_ai_recommender,
+        # Mock the data loader to prevent any actual GCS calls
+        patch("finops_analysis_platform.cli.get_data_loader") as mock_get_data_loader,
+    ):
+        # Configure the mocks
         mock_pdf_instance = mock_pdf_generator.return_value
         mock_pdf_instance.generate_report.return_value = "test_report.pdf"
+        mock_ai_instance = mock_ai_recommender.return_value
+        mock_ai_instance.recommend_portfolio.return_value = {}
+
+        # Ensure the data loader returns sample data
+        mock_loader_instance = SampleDataLoader()
+        mock_get_data_loader.return_value = mock_loader_instance
 
         result = runner.invoke(main, ["run"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 0, f"CLI command failed with output: {result.output}"
         assert "FinOps CUD Analysis finished successfully!" in result.output
-        # Verify that the PDF generator was called, proving file creation was attempted
         mock_pdf_instance.generate_report.assert_called_once()
+        mock_ai_recommender.assert_called_once()
+        mock_get_data_loader.assert_called_once()
 
 
 def test_profile_command_executes_successfully():

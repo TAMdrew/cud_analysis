@@ -45,6 +45,19 @@ prefixes: ['n1', 'e2']
         self.assertAlmostEqual(distribution["n1"], 300)
         self.assertAlmostEqual(distribution["e2"], 50)
 
+    def test_analyze_machine_distribution_empty_input(self):
+        """Test the analysis with an empty or None DataFrame."""
+        # Test with an empty DataFrame
+        empty_df = pd.DataFrame({"SKU": [], "Cost": []})
+        distribution_empty = self.spend_analyzer.analyze_machine_distribution(empty_df)
+        self.assertIsInstance(distribution_empty, dict)
+        self.assertGreater(len(distribution_empty), 0)  # Should return sample data
+
+        # Test with None
+        distribution_none = self.spend_analyzer.analyze_machine_distribution(None)
+        self.assertIsInstance(distribution_none, dict)
+        self.assertGreater(len(distribution_none), 0)  # Should also return sample data
+
 
 if __name__ == "__main__":
     unittest.main()

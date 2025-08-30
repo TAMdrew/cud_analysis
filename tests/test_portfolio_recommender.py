@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from finops_analysis_platform.config_manager import ConfigManager
+from finops_analysis_platform.models import PortfolioRecommendation
 from finops_analysis_platform.portfolio_recommender import (
     AIPortfolioRecommender,
     RuleBasedPortfolioRecommender,
@@ -34,9 +35,9 @@ class TestRuleBasedPortfolioRecommender(unittest.TestCase):
         }
         portfolio = self.recommender.recommend_portfolio(savings_by_machine)
 
-        self.assertIn("layers", portfolio)
-        self.assertEqual(len(portfolio["layers"]), 2)
-        self.assertAlmostEqual(portfolio["total_monthly_savings"], 125.3)
+        self.assertIsInstance(portfolio, PortfolioRecommendation)
+        self.assertEqual(len(portfolio.layers), 2)
+        self.assertAlmostEqual(portfolio.total_monthly_savings, 125.3)
 
 
 class TestAIPortfolioRecommender(unittest.TestCase):
@@ -49,16 +50,11 @@ class TestAIPortfolioRecommender(unittest.TestCase):
             "gcp": {"project_id": "test-project"},
             "analysis": {"risk_tolerance": "medium"},
         }
-        self.recommender = AIPortfolioRecommender(self.config_manager)
 
-    @patch("finops_analysis_platform.portfolio_recommender.initialize_gemini")
     @patch("finops_analysis_platform.portfolio_recommender.generate_content")
-    def test_recommend_portfolio_with_ai(
-        self, mock_generate_content, mock_initialize_gemini
-    ):
+    def test_recommend_portfolio_with_ai(self, mock_generate_content):
         """Test the AI portfolio recommendation logic."""
-        mock_gemini_client = MagicMock()
-        mock_initialize_gemini.return_value = mock_gemini_client
+        self.recommender = AIPortfolioRecommender(self.config_manager)
 
         mock_response = MagicMock()
         mock_response.text = '{"strategy_summary": "test", "portfolio": []}'
@@ -78,6 +74,11 @@ class TestAIPortfolioRecommender(unittest.TestCase):
 
         self.assertIn("strategy_summary", portfolio)
         self.assertEqual(portfolio["strategy_summary"], "test")
+        mock_generate_content.assert_called_once_with(
+            prompt=unittest.mock.ANY,
+            project_id="test-project",
+            location="us-central1",
+        )
 
 
 if __name__ == "__main__":
