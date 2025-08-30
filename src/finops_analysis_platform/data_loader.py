@@ -105,19 +105,19 @@ def generate_sample_recommendations_data(rows: int = 50) -> pd.DataFrame:
     Returns:
         A pandas DataFrame with sample recommendations data.
     """
+    recommendation_types = [
+        "Rightsize VM",
+        "Shut down Idle VM",
+        "Delete idle disk",
+        "Delete idle IP address",
+    ]
     data = {
         "Resource": [f"instance-{i}" for i in range(rows)],
-        "Recommendation": [
-            "Rightsize VM",
-            "Shut down Idle VM",
-            "Delete idle disk",
-            "Delete idle IP address",
-        ]
-        * (rows // 4 + 1),
+        "Recommendation": np.random.choice(recommendation_types, rows),
         "Monthly savings": np.random.uniform(5, 500, rows),
         "Impact": np.random.choice(["Low", "Medium", "High"], rows),
     }
-    return pd.DataFrame(data).head(rows)
+    return pd.DataFrame(data)
 
 
 def generate_sample_manual_analysis_data(rows: int = 100) -> pd.DataFrame:
