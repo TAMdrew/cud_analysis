@@ -1,4 +1,4 @@
-"""Calculates potential savings for each machine type."""
+"""Calculates potential CUD savings for each machine type."""
 
 from typing import Any, Dict
 
@@ -7,20 +7,38 @@ from .discount_mapping import MachineTypeDiscountMapping
 
 
 class SavingsCalculator:
-    """Calculates potential savings."""
+    """Calculates potential savings based on spend and discount rates."""
 
     def __init__(
         self,
         config_manager: ConfigManager,
         discount_mapping: MachineTypeDiscountMapping,
     ):
+        """Initializes the SavingsCalculator.
+
+        Args:
+            config_manager: The application's configuration manager.
+            discount_mapping: The mapping of machine types to discount rates.
+        """
         self.config_manager = config_manager
         self.discount_mapping = discount_mapping
 
     def calculate_savings_by_machine(
         self, distribution: Dict[str, float]
     ) -> Dict[str, Any]:
-        """Calculates potential savings for each machine type."""
+        """Calculates potential savings for each machine type.
+
+        For each machine type, this method determines the stable workload
+        (based on a configured coverage percentage) and then calculates the
+        potential savings for all available CUD types (1/3 year, flex/resource).
+
+        Args:
+            distribution: A dictionary mapping machine types to their total
+                monthly spend.
+
+        Returns:
+            A dictionary with detailed savings options for each machine type.
+        """
         savings = {}
         strategy_config = self.config_manager.get("cud_strategy", {})
         stable_coverage = strategy_config.get("base_layer_coverage", 40) / 100.0

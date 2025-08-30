@@ -33,7 +33,19 @@ class CUDAnalyzer:
         billing_data: Optional[pd.DataFrame] = None,
         recommendations_data: Optional[pd.DataFrame] = None,
     ):
-        """Initializes the CUD analyzer."""
+        """Initializes the CUD analyzer.
+
+        Args:
+            config_manager: The application's configuration manager.
+            spend_analyzer: The spend analyzer component.
+            savings_calculator: The savings calculator component.
+            rule_based_recommender: The rule-based portfolio recommender.
+            ai_recommender: The AI-based portfolio recommender.
+            risk_assessor: The risk assessor component.
+            recommendation_analyzer: The Active Assist recommendation analyzer.
+            billing_data: A DataFrame with billing/spend data.
+            recommendations_data: A DataFrame with Active Assist recommendations.
+        """
         self.config_manager = config_manager
         self.spend_analyzer = spend_analyzer
         self.savings_calculator = savings_calculator
@@ -65,7 +77,15 @@ class CUDAnalyzer:
         return dataframe
 
     def generate_comprehensive_analysis(self) -> AnalysisResults:
-        """Generates a full CUD analysis."""
+        """Generates a full CUD and cost optimization analysis.
+
+        This method orchestrates the various analyzer components to produce a
+        holistic view of cost-saving opportunities, including CUDs and
+        Active Assist recommendations.
+
+        Returns:
+            An `AnalysisResults` object containing the complete analysis.
+        """
         logger.info("Starting comprehensive CUD analysis...")
         machine_distribution = self.spend_analyzer.analyze_machine_distribution(
             self.billing_data

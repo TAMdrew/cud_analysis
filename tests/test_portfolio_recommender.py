@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from finops_analysis_platform.config_manager import ConfigManager
 from finops_analysis_platform.models import PortfolioRecommendation
@@ -51,18 +51,14 @@ class TestAIPortfolioRecommender(unittest.TestCase):
             "analysis": {"risk_tolerance": "medium"},
         }
 
-    @patch("finops_analysis_platform.portfolio_recommender.initialize_vertex_ai")
     @patch("finops_analysis_platform.portfolio_recommender.generate_content")
-    def test_recommend_portfolio_with_ai(
-        self, mock_generate_content, mock_initialize_vertex_ai
-    ):
+    def test_recommend_portfolio_with_ai(self, mock_generate_content):
         """Test the AI portfolio recommendation logic."""
-        mock_initialize_vertex_ai.return_value = True
         self.recommender = AIPortfolioRecommender(self.config_manager)
 
-        mock_generate_content.return_value = (
-            '{"strategy_summary": "test", "portfolio": []}'
-        )
+        mock_response = MagicMock()
+        mock_response.text = '{"strategy_summary": "test", "portfolio": []}'
+        mock_generate_content.return_value = mock_response
 
         savings_by_machine = {
             "n1": {
@@ -78,8 +74,10 @@ class TestAIPortfolioRecommender(unittest.TestCase):
 
         self.assertIn("strategy_summary", portfolio)
         self.assertEqual(portfolio["strategy_summary"], "test")
-        mock_initialize_vertex_ai.assert_called_once_with(
-            project_id="test-project", location="us-central1"
+        mock_generate_content.assert_called_once_with(
+            prompt=unittest.mock.ANY,
+            project_id="test-project",
+            location="us-central1",
         )
 
 

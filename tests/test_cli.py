@@ -1,6 +1,6 @@
 """Tests for the Command-Line Interface."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
@@ -22,7 +22,8 @@ def test_run_command_executes_successfully():
         # Configure the mocks
         mock_pdf_instance = mock_pdf_generator.return_value
         mock_pdf_instance.generate_report.return_value = "test_report.pdf"
-        mock_ai_recommender.return_value = MagicMock()
+        mock_ai_instance = mock_ai_recommender.return_value
+        mock_ai_instance.recommend_portfolio.return_value = {}
 
         # Ensure the data loader returns sample data
         mock_loader_instance = SampleDataLoader()

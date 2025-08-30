@@ -1,4 +1,4 @@
-"""Assesses portfolio risk."""
+"""Assesses CUD portfolio risk based on machine type stability."""
 
 from typing import Dict
 
@@ -6,10 +6,22 @@ from .models import RiskAssessment
 
 
 class RiskAssessor:
-    """Assesses portfolio risk."""
+    """Assesses portfolio risk based on machine type stability."""
 
     def assess_risk(self, savings_by_machine: Dict) -> RiskAssessment:
-        """Assesses the portfolio risk based on machine type stability."""
+        """Assesses the portfolio risk based on machine type stability.
+
+        This method uses a simple heuristic to categorize spend into low,
+        medium, and high risk buckets based on the machine type's typical
+        workload stability (e.g., general purpose vs. specialized GPUs).
+
+        Args:
+            savings_by_machine: A dictionary containing potential savings and
+                spend for each machine type.
+
+        Returns:
+            A `RiskAssessment` object with the overall risk and recommendation.
+        """
         risk_levels = {"low": 0.0, "medium": 0.0, "high": 0.0}
         for machine_type, savings in savings_by_machine.items():
             spend = savings["monthly_spend"]
