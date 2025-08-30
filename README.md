@@ -166,4 +166,4 @@ For issues or questions, please open an issue in the repository.
 
 ---
 
-*Author: andrewanolasco@ (Maintained by Jules) | Version: V2.0.0 | Date: August 2025*
+*Author: andrewanolasco@ (Maintained by Jules) | Version: v1.0.0 | Date: August 2025*

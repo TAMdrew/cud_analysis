@@ -212,7 +212,8 @@ class GCSDataLoader(DataLoader):
         logger.info("Starting data load from GCS bucket: gs://%s", self.bucket_name)
         data_frames = self._load_data_from_gcs()
 
-        if not data_frames.get("billing"):
+        billing_df = data_frames.get("billing")
+        if billing_df is None or billing_df.empty:
             logger.warning(
                 "No billing data loaded from GCS. Falling back to sample data."
             )

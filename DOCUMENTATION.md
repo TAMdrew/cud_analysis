@@ -1,6 +1,6 @@
 # 📖 Documentation
 
-This document provides detailed documentation for the **Cloud FinOps CUD Analysis Platform** library (V2.1.0).
+This document provides detailed documentation for the **Cloud FinOps CUD Analysis Platform** library (v1.0.0).
 
 ## 🏗️ Project Structure
 
@@ -84,4 +84,4 @@ The CLI provides an easy way to run the analysis from the command line.
 - **`finops-cli profile`**: Profiles a specific dataset.
 
 ---
-*Author: andrewanolasco@ (Maintained by Jules) | Version: V2.1.0 | Date: August 2025*
+*Author: andrewanolasco@ (Maintained by Jules) | Version: v1.0.0 | Date: August 2025*
