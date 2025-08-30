@@ -61,7 +61,7 @@ def create_dashboard(analysis: AnalysisResults, config_manager: ConfigManager):
     # This part needs to be adapted as total_savings_summary is not in the model
     # For now, we will use the portfolio recommendation total savings
     savings_summary = analysis.portfolio_recommendation.total_monthly_savings
-    strategies = ["Optimal Mix"]
+    strategies = ["Optimal Mix (Rule-Based)"]
     savings = [savings_summary]
     fig.add_trace(
         go.Bar(
