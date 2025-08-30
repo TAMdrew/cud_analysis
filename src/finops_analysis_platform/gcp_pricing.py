@@ -1,9 +1,12 @@
 # src/finops_analysis_platform/gcp_pricing.py
 
 import json
+import logging
 from typing import Any, Dict, List, Optional
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class GcpSkuFetcher:
@@ -15,7 +18,9 @@ class GcpSkuFetcher:
     BASE_URL = "https://cloudbilling.googleapis.com/v1"
     COMPUTE_ENGINE_SERVICE_ID = "6F81-5844-456A"
 
-    # Known SKU IDs for the new flexible CUD models
+    # Note: These SKU IDs may change over time or new ones may be added.
+    # It is recommended to periodically review and update this dictionary
+    # to ensure accuracy.
     NEW_MODEL_SKU_IDS = {
         "B22F-51BE-D599": "New Model - 3 Year Flexible CUD",
         "5515-81A8-03A2": "New Model - 1 Year Flexible CUD",
@@ -46,7 +51,9 @@ class GcpSkuFetcher:
         page_token: Optional[str] = None
         url = f"{self.BASE_URL}/services/{service_id}/skus"
 
-        print(f"Fetching all SKUs for service {service_id} (this may take a moment)...")
+        logger.info(
+            "Fetching all SKUs for service %s (this may take a moment)...", service_id
+        )
 
         while True:
             params = {"key": self.api_key}
@@ -64,20 +71,21 @@ class GcpSkuFetcher:
                 if not page_token:
                     break
             except requests.exceptions.RequestException as e:
-                print(f"\nAn error occurred while calling the API: {e}")
+                logger.error("An error occurred while calling the API: %s", e)
                 if e.response:
                     try:
                         error_details = e.response.json()
-                        print("API Error Response:")
-                        print(json.dumps(error_details, indent=2))
+                        logger.error(
+                            "API Error Response: %s",
+                            json.dumps(error_details, indent=2),
+                        )
                     except (ValueError, AttributeError):
-                        print("Raw Error Response Text:")
-                        print(e.response.text)
+                        logger.error("Raw Error Response Text: %s", e.response.text)
                 else:
-                    print("No response received from the server.")
+                    logger.error("No response received from the server.")
                 return None
 
-        print(f"\nFinished fetching. Total SKUs found: {len(all_skus)}")
+        logger.info("Finished fetching. Total SKUs found: %d", len(all_skus))
         return all_skus
 
     def analyze_cud_prices(self) -> List[Dict[str, Any]]:
@@ -92,7 +100,7 @@ class GcpSkuFetcher:
         if not all_skus:
             return []
 
-        print("\n--- Analyzing CUD SKUs ---")
+        logger.info("Analyzing CUD SKUs...")
         found_skus_data: List[Dict[str, Any]] = []
 
         for sku in all_skus:
@@ -144,6 +152,6 @@ class GcpSkuFetcher:
                 found_skus_data.append(sku_details)
 
         if not found_skus_data:
-            print("\nNo matching CUD SKUs (old or new model) were found.")
+            logger.info("No matching CUD SKUs (old or new model) were found.")
 
         return found_skus_data

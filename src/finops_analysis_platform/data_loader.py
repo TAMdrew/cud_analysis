@@ -96,6 +96,30 @@ def generate_sample_billing_data(rows: int = 1000) -> pd.DataFrame:
     return dataframe
 
 
+def generate_sample_recommendations_data(rows: int = 50) -> pd.DataFrame:
+    """Generates a DataFrame with sample recommendations data.
+
+    Args:
+        rows: The number of sample rows to generate.
+
+    Returns:
+        A pandas DataFrame with sample recommendations data.
+    """
+    data = {
+        "Resource": [f"instance-{i}" for i in range(rows)],
+        "Recommendation": [
+            "Rightsize VM",
+            "Shut down Idle VM",
+            "Delete idle disk",
+            "Delete idle IP address",
+        ]
+        * (rows // 4 + 1),
+        "Monthly savings": np.random.uniform(5, 500, rows),
+        "Impact": np.random.choice(["Low", "Medium", "High"], rows),
+    }
+    return pd.DataFrame(data).head(rows)
+
+
 def generate_sample_manual_analysis_data(rows: int = 100) -> pd.DataFrame:
     """Generates a DataFrame with sample manual analysis data.
 
@@ -164,7 +188,7 @@ class GCSDataLoader(DataLoader):
             return storage.Client(credentials=credentials, project=project)
         except DefaultCredentialsError:
             logger.warning(
-                "Google Cloud authentication failed. Could not find default \n"
+                "Google Cloud authentication failed. Could not find default "
                 "credentials. Proceeding with sample data as fallback."
             )
             return None
@@ -188,8 +212,10 @@ class GCSDataLoader(DataLoader):
         logger.info("Starting data load from GCS bucket: gs://%s", self.bucket_name)
         data_frames = self._load_data_from_gcs()
 
-        if not data_frames:
-            logger.warning("No data loaded from GCS. Falling back to sample data.")
+        if not data_frames.get("billing"):
+            logger.warning(
+                "No billing data loaded from GCS. Falling back to sample data."
+            )
             return SampleDataLoader().load_all_data()
 
         self._log_summary(data_frames)
@@ -312,6 +338,7 @@ class SampleDataLoader(DataLoader):
         logger.info("Generating sample data sets for demonstration purposes.")
         return {
             "billing": generate_sample_billing_data(),
+            "recommendations": generate_sample_recommendations_data(),
             "manual_analysis": generate_sample_manual_analysis_data(),
             "sample_data": True,
         }

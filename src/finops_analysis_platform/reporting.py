@@ -188,7 +188,7 @@ class PDFReportGenerator:
         Returns:
             The filename of the generated report.
         """
-        if filename is None or filename == "":
+        if not filename:
             filename = f"CFO_CUD_Report_{datetime.now().strftime('%Y%m%d')}.pdf"
 
         doc = SimpleDocTemplate(filename, pagesize=letter)
