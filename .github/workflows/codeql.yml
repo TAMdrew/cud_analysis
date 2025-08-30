@@ -21,9 +21,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python' ]
-        # Analysis is most effective on the latest supported version.
-        # Running on multiple versions is redundant for CodeQL's static analysis.
+        language: [ 'python', 'actions' ]
+        # We don't need to specify a python-version for the 'actions' language
+        # but we can keep it for the 'python' language.
+        # CodeQL will handle this gracefully.
         python-version: [ '3.12' ]
 
     steps:
