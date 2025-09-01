@@ -109,11 +109,10 @@ gcp:
 
 You can run the analysis using the **Jupyter Notebooks** or the **Command-Line Interface (CLI)**.
 
-#### Jupyter Notebooks
-- **`notebooks/CUD_Analysis_Walkthrough.ipynb`**: A comprehensive, step-by-step guide to running the core CUD analysis and generating reports.
-- **`notebooks/AI_Powered_Analysis.ipynb`**: An interactive notebook that uses Gemini 2.5 Pro to perform ad-hoc analysis using natural language, code execution, and URL context.
+#### Jupyter Notebook
+- **`notebooks/CUD_Analysis_and_Reporting.ipynb`**: A comprehensive, unified notebook that serves as the primary interface for the platform. It allows for one-click automated analysis, interactive deep-dives, and other utilities.
 
-Navigate to the notebooks and execute the cells sequentially.
+Navigate to the notebook and execute the cells sequentially.
 
 #### Command-Line Interface (CLI)
 ```bash
