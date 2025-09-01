@@ -9,8 +9,9 @@ from finops_analysis_platform.gemini_service import generate_content
 class TestGeminiService(unittest.TestCase):
     """Test suite for the Gemini service."""
 
+    @patch("google.generativeai.configure")
     @patch("google.generativeai.GenerativeModel")
-    def test_generate_content_success(self, mock_generative_model):
+    def test_generate_content_success(self, mock_generative_model, mock_configure):
         """Test successful content generation."""
         # Mock the model and its response
         mock_model_instance = MagicMock()
@@ -27,11 +28,12 @@ class TestGeminiService(unittest.TestCase):
         self.assertEqual(response.text, "Test response")
         mock_generative_model.assert_called_once()
 
+    @patch("google.generativeai.configure")
     @patch(
-        "finops_analysis_platform.gemini_service.generate_content",
+        "google.generativeai.GenerativeModel.generate_content",
         side_effect=Exception("API Error"),
     )
-    def test_generate_content_api_error(self, mock_generate_content):
+    def test_generate_content_api_error(self, mock_generate_content, mock_configure):
         """Test handling of an API error during content generation."""
         response = generate_content(
             prompt="test prompt", project_id="test-project", location="us-central1"
