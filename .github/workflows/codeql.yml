@@ -21,11 +21,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python', 'actions' ]
-        # We don't need to specify a python-version for the 'actions' language
-        # but we can keep it for the 'python' language.
-        # CodeQL will handle this gracefully.
+        language: [ 'python' ]
         python-version: [ '3.12' ]
+        # Add a separate job for Actions analysis without a Python version
+        include:
+          - language: actions
 
     steps:
     - name: Checkout repository
@@ -41,15 +41,15 @@ jobs:
         # For example, to run only security-extended queries:
         # queries: +security-extended
 
-    # To ensure CodeQL has a complete view of the codebase, including all
-    # dependencies, we replicate the installation steps from the main CI workflow.
-    # This is more robust than relying on the autobuilder's heuristics.
+    # For Python analysis, we need to install dependencies.
     - name: Set up Python ${{ matrix.python-version }}
+      if: matrix.language == 'python'
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
+      if: matrix.language == 'python'
       run: |
         python -m pip install --upgrade pip
         pip install -e .[dev]
