@@ -29,11 +29,8 @@ class TestGeminiService(unittest.TestCase):
         mock_generative_model.assert_called_once()
 
     @patch("google.generativeai.configure")
-    @patch(
-        "google.generativeai.GenerativeModel.generate_content",
-        side_effect=Exception("API Error"),
-    )
-    def test_generate_content_api_error(self, mock_generate_content, mock_configure):
+    @patch("google.generativeai.GenerativeModel", side_effect=Exception("API Error"))
+    def test_generate_content_api_error(self, mock_generative_model, mock_configure):
         """Test handling of an API error during content generation."""
         response = generate_content(
             prompt="test prompt", project_id="test-project", location="us-central1"
