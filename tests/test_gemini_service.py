@@ -3,6 +3,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+from google.api_core import exceptions
+
 from finops_analysis_platform.gemini_service import generate_content
 
 
@@ -29,9 +31,16 @@ class TestGeminiService(unittest.TestCase):
         mock_generative_model.assert_called_once()
 
     @patch("google.generativeai.configure")
-    @patch("google.generativeai.GenerativeModel", side_effect=Exception("API Error"))
+    @patch("google.generativeai.GenerativeModel")
     def test_generate_content_api_error(self, mock_generative_model, mock_configure):
-        """Test handling of an API error during content generation."""
+        """Test handling of a realistic API error during content generation."""
+        # Configure the mock instance to raise a specific, expected exception
+        mock_model_instance = MagicMock()
+        mock_model_instance.generate_content.side_effect = (
+            exceptions.GoogleAPICallError("API Error")
+        )
+        mock_generative_model.return_value = mock_model_instance
+
         response = generate_content(
             prompt="test prompt", project_id="test-project", location="us-central1"
         )
