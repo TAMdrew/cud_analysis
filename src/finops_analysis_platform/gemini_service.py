@@ -65,6 +65,6 @@ def generate_content(
             tools=tools,
         )
         return response
-    except (exceptions.GoogleAPICallError, ValueError, TypeError, Exception) as e:
+    except (exceptions.GoogleAPICallError, ValueError, TypeError) as e:
         logger.error("Gemini API call failed: %s", e)
         return None
