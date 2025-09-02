@@ -1,9 +1,7 @@
 """Provides a service layer for interacting with the Google Gemini API.
 
-This module uses the unified `google-generativeai` SDK. When running in a
-properly authenticated GCP environment (like Vertex AI Workbench), the SDK
-automatically handles the connection to the Vertex AI backend without special
-configuration.
+This module uses the unified `google-generativeai` SDK and provides a clear
+initialization function to configure it for use with Vertex AI.
 """
 
 import logging
@@ -21,6 +19,31 @@ SIMPLE_MODEL = "gemini-1.5-flash-preview-0514"
 COMPLEX_PROMPT_THRESHOLD = 1500  # characters
 
 
+def initialize_gemini(project_id: str, location: str) -> bool:
+    """Initializes and configures the Gemini SDK to use Vertex AI.
+
+    This function must be called before `generate_content`.
+
+    Args:
+        project_id: The Google Cloud project ID.
+        location: The Google Cloud location (e.g., 'us-central1').
+
+    Returns:
+        True if initialization was successful, False otherwise.
+    """
+    try:
+        genai.configure(project=project_id, location=location)
+        logger.info(
+            "Gemini SDK configured for Vertex AI in project '%s' and location '%s'",
+            project_id,
+            location,
+        )
+        return True
+    except (ValueError, TypeError, exceptions.GoogleAPICallError) as e:
+        logger.error("Failed to configure Gemini SDK for Vertex AI: %s", e)
+        return False
+
+
 def _get_model_for_prompt(prompt: str) -> str:
     """Selects a cost-effective model based on prompt complexity."""
     if len(prompt) > COMPLEX_PROMPT_THRESHOLD:
@@ -30,17 +53,13 @@ def _get_model_for_prompt(prompt: str) -> str:
 
 def generate_content(
     prompt: str,
-    project_id: str,
-    location: str,
     tools: Optional[List[Tool]] = None,
     model_id: Optional[str] = None,
 ) -> Optional[genai.types.GenerateContentResponse]:
-    """Generates content using the Gemini API, configured for Vertex AI.
+    """Generates content using the configured Gemini API client.
 
     Args:
         prompt: The prompt to send to the model.
-        project_id: The Google Cloud project ID.
-        location: The Google Cloud location (e.g., 'us-central1').
         tools: A list of tools for the model to use.
         model_id: The specific model ID to use.
 
@@ -53,7 +72,6 @@ def generate_content(
     generation_config = GenerationConfig(temperature=0)
 
     try:
-        # The SDK automatically uses Vertex AI when project & location are set
         model = genai.GenerativeModel(
             model_id,
             system_instruction="You are a helpful financial analyst specialized in Google Cloud.",
@@ -65,6 +83,6 @@ def generate_content(
             tools=tools,
         )
         return response
-    except (exceptions.GoogleAPICallError, ValueError, TypeError) as e:
+    except (exceptions.GoogleAPICallError, ValueError, TypeError, Exception) as e:
         logger.error("Gemini API call failed: %s", e)
         return None

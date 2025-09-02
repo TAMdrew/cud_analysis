@@ -1,10 +1,12 @@
+"""Recommends a CUD portfolio using rule-based and AI-driven strategies."""
+
 import json
 import logging
 from pathlib import Path
 from typing import Any, Dict, Protocol, cast
 
 from .config_manager import ConfigManager
-from .gemini_service import generate_content
+from .gemini_service import generate_content, initialize_gemini
 from .models import PortfolioLayer, PortfolioRecommendation
 
 logger = logging.getLogger(__name__)
@@ -85,6 +87,16 @@ class AIPortfolioRecommender(PortfolioRecommender):
             config_manager: The application's configuration manager.
         """
         self.config_manager = config_manager
+        self.gemini_initialized = self._initialize_gemini()
+
+    def _initialize_gemini(self) -> bool:
+        """Initializes the Gemini client if configured."""
+        project_id = self.config_manager.get("gcp.project_id")
+        location = self.config_manager.get("gcp.location", "us-central1")
+        if project_id:
+            return initialize_gemini(project_id=project_id, location=location)
+        logger.warning("Gemini client not initialized: gcp.project_id not configured.")
+        return False
 
     def recommend_portfolio(self, savings_by_machine: Dict) -> Dict[str, Any]:
         """Generates a CUD portfolio optimization using the Gemini AI.
@@ -97,12 +109,9 @@ class AIPortfolioRecommender(PortfolioRecommender):
             A dictionary containing the AI's portfolio recommendation, or an
             error message if the generation fails.
         """
-        project_id = self.config_manager.get("gcp.project_id")
-        location = self.config_manager.get("gcp.location", "us-central1")
-
-        if not project_id:
+        if not self.gemini_initialized:
             logger.warning(
-                "Cannot generate AI portfolio: gcp.project_id not configured."
+                "Cannot generate AI portfolio optimization because Gemini is not initialized."
             )
             return {}
 
@@ -124,9 +133,7 @@ class AIPortfolioRecommender(PortfolioRecommender):
         logger.info(
             "Generating AI CUD portfolio for risk tolerance: %s", risk_tolerance
         )
-        response = generate_content(
-            prompt=prompt, project_id=project_id, location=location
-        )
+        response = generate_content(prompt=prompt)
 
         if not (response and response.text):
             return {"error": "No response from AI for portfolio optimization."}

@@ -51,9 +51,13 @@ class TestAIPortfolioRecommender(unittest.TestCase):
             "analysis": {"risk_tolerance": "medium"},
         }
 
+    @patch("finops_analysis_platform.portfolio_recommender.initialize_gemini")
     @patch("finops_analysis_platform.portfolio_recommender.generate_content")
-    def test_recommend_portfolio_with_ai(self, mock_generate_content):
+    def test_recommend_portfolio_with_ai(
+        self, mock_generate_content, mock_initialize_gemini
+    ):
         """Test the AI portfolio recommendation logic."""
+        mock_initialize_gemini.return_value = True
         self.recommender = AIPortfolioRecommender(self.config_manager)
 
         mock_response = MagicMock()
@@ -74,10 +78,9 @@ class TestAIPortfolioRecommender(unittest.TestCase):
 
         self.assertIn("strategy_summary", portfolio)
         self.assertEqual(portfolio["strategy_summary"], "test")
-        mock_generate_content.assert_called_once_with(
-            prompt=unittest.mock.ANY,
-            project_id="test-project",
-            location="us-central1",
+        mock_generate_content.assert_called_once()
+        mock_initialize_gemini.assert_called_once_with(
+            project_id="test-project", location="us-central1"
         )
 
 

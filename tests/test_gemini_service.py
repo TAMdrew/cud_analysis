@@ -22,9 +22,7 @@ class TestGeminiService(unittest.TestCase):
         mock_model_instance.generate_content.return_value = mock_response
         mock_generative_model.return_value = mock_model_instance
 
-        response = generate_content(
-            prompt="test prompt", project_id="test-project", location="us-central1"
-        )
+        response = generate_content(prompt="test prompt")
 
         self.assertIsNotNone(response)
         self.assertEqual(response.text, "Test response")
@@ -41,9 +39,7 @@ class TestGeminiService(unittest.TestCase):
         )
         mock_generative_model.return_value = mock_model_instance
 
-        response = generate_content(
-            prompt="test prompt", project_id="test-project", location="us-central1"
-        )
+        response = generate_content(prompt="test prompt")
         self.assertIsNone(response)
 
 
